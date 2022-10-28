@@ -4,7 +4,7 @@ import os
 import sys
 from setuptools import setup, find_packages
 #from onevizion import __version__
-__version__ = '1.0.38'
+__version__ = '1.1.0'
 
 #following PyPI guide: https://hynek.me/articles/sharing-your-labor-of-love-pypi-quick-and-dirty/
 
@@ -30,8 +30,7 @@ setup(name='onevizion',
 	"Programming Language :: Python",
 	],
 	install_requires=['requests'],
-	py_modules = ['onevizion'],
-
+	packages = find_packages(),
 	platforms=["Unix"],
 	license="MIT",
 	description="onevizion wraps the version 3 API for a OneVizion system, and provides a few optional other utilities."
