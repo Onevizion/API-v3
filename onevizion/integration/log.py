@@ -2,7 +2,7 @@ import requests
 import json
 from onevizion.util import *
 from onevizion.curl import curl
-from onevizion.integration.loglevel import Loglevel
+from onevizion.integration.loglevel import LogLevel
 from onevizion.httpbearer import HTTPBearerAuth
 import onevizion
 
