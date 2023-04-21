@@ -111,6 +111,7 @@ class EMail(object):
 			msg['From'] = self.sender
 		else:
 			msg['From'] = self.userName
+			self.sender = self.userName
 		msg['Subject'] = self.subject
 
 		body = self.message + "\n"
@@ -178,7 +179,7 @@ class EMail(object):
 		else:
 			send = smtplib.SMTP(self.server, int(self.port))
 		send.login(str(self.userName), str(self.password))
-		send.sendmail(str(self.userName),self.to, msg.as_string())
+		send.sendmail(str(self.sender),self.to, msg.as_string())
 		send.quit()
 
 		after = datetime.utcnow()
