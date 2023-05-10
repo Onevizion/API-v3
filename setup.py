@@ -4,7 +4,7 @@ import os
 import sys
 from setuptools import setup, find_packages
 #from onevizion import __version__
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
 #following PyPI guide: https://hynek.me/articles/sharing-your-labor-of-love-pypi-quick-and-dirty/
 
