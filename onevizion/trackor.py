@@ -232,7 +232,7 @@ class Trackor(object):
 					)
 			JSON = json.dumps(FieldsSection)
 
-		Headers = {'content-type': 'application/x-www-form-urlencoded'}
+		Headers = {'content-type': 'application/json'}
 		if charset != "":
 			Headers['charset'] = charset
 		self.errors = []
@@ -485,12 +485,30 @@ class Trackor(object):
 
 
 	def UploadFile(self, trackorId, fieldName, fileName, newFileName=None):
-		""" Get a File from a particular Trackor record's particular Configured field
+		""" Upload a file to a particular Trackor record's particular Configured field
 
-			trackorID: the system ID for the particular Trackor record that this is being assigned to.
+			trackorId: the system ID for the particular Trackor record that this is being assigned to.
 			fieldName: should be the Configured Field Name, not the Label.
 			fileName: path and file name to file you want to upload
 			newFileName: Optional, rename file when uploading.
+		"""
+
+		FilePath = fileName
+		FileName = newFileName if newFileName else os.path.basename(FilePath)
+		BinaryStream = open(FilePath, 'rb')
+
+		Message("FilePath: {FilePath}".format(FilePath=FilePath),2)
+
+		self.UploadFileByFileContents(trackorId=trackorId, fieldName=fieldName, fileName=FileName, fileContents=BinaryStream)
+
+
+	def UploadFileByFileContents(self, trackorId, fieldName, fileName, fileContents):
+		""" Upload a file to a particular Trackor record's particular Configured field
+
+			trackorID: the system ID for the particular Trackor record that this is being assigned to.
+			fieldName: should be the Configured Field Name, not the Label.
+			fileName: name of the file you want to upload.
+			fileContents: byte string or BufferedReader of the file you want to upload.
 		"""
 
 		URL = "{Website}/api/v3/trackor/{TrackorID}/file/{ConfigFieldName}".format(
@@ -498,12 +516,9 @@ class Trackor(object):
 				TrackorID=trackorId,
 				ConfigFieldName=fieldName
 				)
-		if newFileName is not None:
-			URL += "?file_name="+URLEncode(newFileName)
-			File = {'file': (os.path.basename(newFileName), open(fileName, 'rb'))}
-		else:
-			URL += "?file_name="+URLEncode(os.path.basename(fileName))
-			File = {'file': (os.path.basename(fileName), open(fileName, 'rb'))}
+
+		URL += "?file_name=" + URLEncode(fileName)
+		File = {'file': (fileName, fileContents)}
 
 		self.errors = []
 		self.jsonData = {}
