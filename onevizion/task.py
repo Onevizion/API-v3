@@ -81,7 +81,7 @@ class Task(object):
 
 		URL = "{URL}/api/v3/tasks/{TaskID}".format(URL=self.URL, TaskID=taskId)
 		#payload = open('temp_payload.json','rb')
-		Headers = {'content-type': 'application/x-www-form-urlencoded'}
+		Headers = {'content-type': 'application/json'}
 		self.errors = []
 		self.jsonData = {}
 		self.OVCall = curl(method, URL, data=JSON, headers=Headers, auth=self.auth)
