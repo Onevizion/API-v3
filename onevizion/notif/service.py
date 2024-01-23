@@ -1,10 +1,11 @@
 from onevizion.util import *
 from abc import ABC, abstractmethod
-from onevizion.integration.log import IntegrationLog
-from onevizion.integration.loglevel import LogLevel
+from onevizion.module.log import IntegrationLog, ModuleLog
+from onevizion.module.loglevel import LogLevel
 from onevizion.notif.queue import NotifQueue
 from onevizion.notif.queuerecord import NotifQueueRecord
 from onevizion.notif.queuestatus import NotifQueueStatus
+from warnings import warn
 import time
 
 class NotificationService(ABC):
@@ -17,7 +18,7 @@ class NotificationService(ABC):
 		URL: a string representing the website's main URL for instance "trackor.onevizion.com".
 		userName: the username or the OneVizion API Security Token Access Key that is used to login to the system
 		password: the password or the OneVizion API Security Token Secret Key that is used to gain access to the system
-		logLevel: log level name (Info, Warning, Error, Debug) for logging integration actions
+		logLevel: log level name (Info, Warning, Error, Debug) for logging Module actions
 		maxAttempts: the number of attempts to send message 
 		nextAttemptDelay: the delay in seconds before the next message sending after an unsuccessful attempt
 
@@ -30,37 +31,45 @@ class NotificationService(ABC):
 		self._notifQueue = NotifQueue(serviceId, URL, userName, password, paramToken, isTokenAuth)
 		self._maxAttempts = maxAttempts or 1
 		self._nextAttemptDelay = nextAttemptDelay or 30
+		self._moduleLog = ModuleLog(processId, URL, userName, password, paramToken, isTokenAuth, logLevel)
+		#_integrationLog is deprecated. Use _moduleLog instead.
 		self._integrationLog = IntegrationLog(processId, URL, userName, password, paramToken, isTokenAuth, logLevel)
 
+	def __getattribute__(self, item):
+		if '_integrationLog' == item:
+			warn(f'{item} is deprecated. Use _moduleLog instead.', DeprecationWarning, stacklevel=2)
+
+		return object.__getattribute__(self, item)
+
 	def start(self):
-		self._integrationLog.add(LogLevel.INFO, "Starting Integration")
+		self._moduleLog.add(LogLevel.INFO, "Starting Module")
 		attempts = 0
 
-		self._integrationLog.add(LogLevel.INFO, "Receiving Notif Queue")
+		self._moduleLog.add(LogLevel.INFO, "Receiving Notif Queue")
 		notifQueueJson = self._notifQueue.getNotifQueue()
-		self._integrationLog.add(LogLevel.DEBUG, "Notif Queue json data", str(notifQueueJson))
+		self._moduleLog.add(LogLevel.DEBUG, "Notif Queue json data", str(notifQueueJson))
 
 		try:
 			notifQueue = self._convertNotifQueueJsonToList(notifQueueJson)
 		except Exception as e:
-			self._integrationLog.add(LogLevel.ERROR, "Can't convert Notif Queue json data to list", str(e))
+			self._moduleLog.add(LogLevel.ERROR, "Can't convert Notif Queue json data to list", str(e))
 			raise Exception("Can't convert Notif Queue json data to list") #from e
 
 		preparedNotifQueue = []
 		try:
 			preparedNotifQueue = self._prepareNotifQueue(notifQueue)
 		except Exception as e:
-			self._integrationLog.add(LogLevel.ERROR, "Can't prepare Notif Queue to send", str(e))
+			self._moduleLog.add(LogLevel.ERROR, "Can't prepare Notif Queue to send", str(e))
 			raise Exception("Can't prepare Notif Queue to send") #from e
 
-		self._integrationLog.add(LogLevel.INFO, "Notif Queue size: [{}]".format(len(preparedNotifQueue)))
+		self._moduleLog.add(LogLevel.INFO, "Notif Queue size: [{}]".format(len(preparedNotifQueue)))
 
 		while len(preparedNotifQueue) > 0 and attempts < self._maxAttempts:
 			if attempts > 0:
-				self._integrationLog.add(LogLevel.INFO, "Attempt Number [{}]".format(attempts + 1))
+				self._moduleLog.add(LogLevel.INFO, "Attempt Number [{}]".format(attempts + 1))
 
 			for notifQueueRec in preparedNotifQueue:
-				self._integrationLog.add(LogLevel.INFO,
+				self._moduleLog.add(LogLevel.INFO,
 											  "Sending Notif Queue Record with id = [{}]".format(
 												  notifQueueRec.notifQueueId))
 				notifQueueRec.status = NotifQueueStatus.SENDING.name
@@ -70,7 +79,7 @@ class NotificationService(ABC):
 					self.sendNotification(notifQueueRec)
 				except Exception as e:
 					self._notifQueue.addNewAttempt(notifQueueRec.notifQueueId, str(e))
-					self._integrationLog.add(LogLevel.ERROR,
+					self._moduleLog.add(LogLevel.ERROR,
 												  "Can't send Notif Queue Record with id = [{}]".format(
 													  notifQueueRec.notifQueueId),
 												  str(e))
@@ -90,18 +99,18 @@ class NotificationService(ABC):
 			attempts += 1
 
 			if len(preparedNotifQueue) > 0 and self._maxAttempts > attempts:
-				self._integrationLog.add(LogLevel.WARNING,
+				self._moduleLog.add(LogLevel.WARNING,
 											  "Can't send [{0}] notifications. Next try in [{1}] seconds".format(
 												  len(preparedNotifQueue),
 												  self._nextAttemptDelay))
 				time.sleep(self._nextAttemptDelay)
 
 		if len(preparedNotifQueue) > 0:
-			self._integrationLog.add(LogLevel.ERROR,
+			self._moduleLog.add(LogLevel.ERROR,
 										  "Can't send [{}] notifications. All attempts have been exhausted.".format(
 											  len(preparedNotifQueue)))
 
-		self._integrationLog.add(LogLevel.INFO, "Integration has been completed")
+		self._moduleLog.add(LogLevel.INFO, "Module has been completed")
 
 	@staticmethod
 	def _convertNotifQueueJsonToList(jsonData):
@@ -112,7 +121,7 @@ class NotificationService(ABC):
 
 	@abstractmethod
 	def sendNotification(self, notifQueueRecord):
-		"""Send notifications anywhere. You must implement this in your integration. 
+		"""Send notifications anywhere. You must implement this in your module. 
 			"notifQueueRecord": record from the notification queue. An instance of the NotifQueueRecord class
 		"""
 		pass

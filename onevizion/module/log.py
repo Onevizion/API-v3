@@ -1,12 +1,15 @@
 import requests
 import json
+# "deprecated" has been used since version 3.13.
+from warnings import warn
 from onevizion.util import *
 from onevizion.curl import curl
-from onevizion.integration.loglevel import LogLevel
+from onevizion.module.loglevel import LogLevel
 from onevizion.httpbearer import HTTPBearerAuth
 import onevizion
 
-class IntegrationLog(object):
+
+class ModuleLog(object):
 	"""Wrapper for adding logs to the OneVizion.
 
 	Attributes:
@@ -14,7 +17,7 @@ class IntegrationLog(object):
 		URL: A string representing the website's main URL for instance "trackor.onevizion.com".
 		userName: the username or the OneVizion API Security Token Access Key that is used to login to the system
 		password: the password or the OneVizion API Security Token Secret Key that is used to gain access to the system
-		logLevel: log level name (Info, Warning, Error, Debug) for logging integration actions
+		logLevel: log level name (Info, Warning, Error, Debug) for logging module actions
 
 	Exception can be thrown for method 'add'
 	"""
@@ -48,8 +51,27 @@ class IntegrationLog(object):
 			parameters = {'message': message, 'description': description, 'log_level_name': logLevel.logLevelName}
 			jsonData = json.dumps(parameters)
 			headers = {'content-type': 'application/json'}
-			url_log = "{URL}/api/v3/integrations/runs/{ProcessID}/logs".format(URL=self._URL, ProcessID=self._processId)
+			url_log = "{URL}/api/v3/modules/runs/{ProcessID}/logs".format(URL=self._URL, ProcessID=self._processId)
 			OVCall = curl('POST', url_log, data=jsonData, headers=headers, auth=self._auth)
 			if len(OVCall.errors) > 0:
 				raise Exception(OVCall.errors)
 			return OVCall.jsonData
+
+
+# deprecated has been used since version 3.13
+# @deprecated("Use ModuleLog instead")
+class IntegrationLog(object):
+	"""Wrapper for adding logs to the OneVizion.
+	
+	This class is deprecated. Use ModuleLog instead.
+	"""
+
+	def __init__(self, processId, URL="", userName="", password="", paramToken=None, isTokenAuth=False, logLevelName="Error"):
+		"""This throws a deprecation warning on initialization."""
+		warn(f'{self.__class__.__name__} is deprecated. Use ModuleLog instead.', DeprecationWarning, stacklevel=2)
+
+		self._module_log = ModuleLog(processId, URL, userName, password, paramToken, isTokenAuth, logLevelName)
+ 
+
+	def add(self, logLevel, message, description=""):
+		self._module_log.add(logLevel, message, description)
