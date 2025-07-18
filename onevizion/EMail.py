@@ -5,7 +5,13 @@ from collections import OrderedDict
 from onevizion.util import *
 import onevizion
 
-
+# older version compatibility
+try:
+	# python 2 compatibility
+	basestring = basestring
+except:
+	# python 3 compatibility
+	basestring = (str,bytes)
 class EMail(object):
 	"""Made to simplify sending Email notifications in scripts.
 
