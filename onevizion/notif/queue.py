@@ -36,6 +36,8 @@ class NotifQueue:
 				self._userName = onevizion.Config["ParameterData"][paramToken]['UserName']
 			if self._password == "":
 				self._password = onevizion.Config["ParameterData"][paramToken]['Password']
+			if 'isTokenAuth' in onevizion.Config["ParameterData"][paramToken]:
+				isTokenAuth = onevizion.Config["ParameterData"][paramToken]['isTokenAuth']
 
 		self._URL = getUrlContainingScheme(self._URL)
 

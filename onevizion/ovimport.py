@@ -43,6 +43,8 @@ class OVImport(object):
 				self.userName = onevizion.Config["ParameterData"][paramToken]['UserName']
 			if self.password is None:
 				self.password = onevizion.Config["ParameterData"][paramToken]['Password']
+			if 'isTokenAuth' in onevizion.Config["ParameterData"][paramToken]:
+				isTokenAuth = onevizion.Config["ParameterData"][paramToken]['isTokenAuth']
 
 		# If all info is filled out, go ahead and run the query.
 		if self.URL != None and self.userName != None and self.password != None and self.impSpecId != None and self.file != None:

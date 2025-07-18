@@ -53,6 +53,8 @@ class Export(object):
 				self.userName = onevizion.Config["ParameterData"][paramToken]['UserName']
 			if self.password is None:
 				self.password = onevizion.Config["ParameterData"][paramToken]['Password']
+			if 'isTokenAuth' in onevizion.Config["ParameterData"][paramToken]:
+				isTokenAuth = onevizion.Config["ParameterData"][paramToken]['isTokenAuth']
 
 		self.URL = getUrlContainingScheme(self.URL)
 
