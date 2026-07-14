@@ -19,7 +19,7 @@ def vcr_config():
             ('access_key', 'REDACTED'),
             ('secret_key', 'REDACTED'),
         ],
-        "record_mode": "once",  # Record cassettes once, then replay
+        "record_mode": "none",  # Never re-record, only use existing cassettes
         "match_on": ["method", "scheme", "host", "port", "path", "query"],
         "cassette_library_dir": "tests/fixtures/cassettes",
     }

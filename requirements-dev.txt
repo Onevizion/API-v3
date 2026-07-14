@@ -26,9 +26,8 @@ vcrpy>=4.0; python_version >= '3.6'
 # For Python 2.6/2.7 compatibility
 mock; python_version < '3.0'
 
-# Linting (Python 3.6+ only)
-flake8>=3.8; python_version >= '3.6'
-black>=22.0; python_version >= '3.7'
+# Linting and formatting (Python 3.7+ only)
+ruff>=0.1.0; python_version >= '3.7'
 
 # Type checking (Python 3.7+ only)
 mypy>=0.900; python_version >= '3.7'

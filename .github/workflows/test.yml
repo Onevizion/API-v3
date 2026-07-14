@@ -127,23 +127,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: 'pip'
-          cache-dependency-path: 'requirements-dev.txt'
 
-      - name: Install linting tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8 black
+      - name: Install ruff
+        run: pip install ruff
 
-      - name: Check code style with flake8
-        run: |
-          # Stop the build if there are Python syntax errors or undefined names
-          flake8 onevizion/ --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Exit-zero treats all errors as warnings
-          flake8 onevizion/ --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+      - name: Run ruff linter
+        run: ruff check onevizion/ tests/
 
-      - name: Check code formatting with black
-        run: black --check --diff onevizion/
+      - name: Run ruff formatter
+        run: ruff format --check onevizion/ tests/
 
   # Summary job that all checks must pass
   check:
