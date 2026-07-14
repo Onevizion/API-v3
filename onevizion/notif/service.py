@@ -37,7 +37,7 @@ class NotificationService(ABC):
 
 	def __getattribute__(self, item):
 		if '_integrationLog' == item:
-			warn(f'{item} is deprecated. Use _moduleLog instead.', DeprecationWarning, stacklevel=2)
+			warn('{0} is deprecated. Use _moduleLog instead.'.format(item), DeprecationWarning, stacklevel=2)
 
 		return object.__getattribute__(self, item)
 

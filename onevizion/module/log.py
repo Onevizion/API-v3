@@ -70,7 +70,7 @@ class IntegrationLog(object):
 
 	def __init__(self, processId, URL="", userName="", password="", paramToken=None, isTokenAuth=False, logLevelName="Error"):
 		"""This throws a deprecation warning on initialization."""
-		warn(f'{self.__class__.__name__} is deprecated. Use ModuleLog instead.', DeprecationWarning, stacklevel=2)
+		warn('{0} is deprecated. Use ModuleLog instead.'.format(self.__class__.__name__), DeprecationWarning, stacklevel=2)
 
 		self._module_log = ModuleLog(processId, URL, userName, password, paramToken, isTokenAuth, logLevelName)
  
