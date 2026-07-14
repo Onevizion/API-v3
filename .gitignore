@@ -55,6 +55,9 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# Keep VCR cassettes (they should be committed)
+# !tests/fixtures/cassettes/*.yaml
+
 # Translations
 *.mo
 *.pot
