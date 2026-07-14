@@ -1,9 +1,9 @@
-# Development dependencies for testing across Python 2.6 - 3.13
+# Development dependencies for testing across Python 2.7 - 3.13
 #
-# For Python 2.6-2.7:
+# For Python 2.7:
 #   pip install "pytest<5.0" "pytest-cov<2.6" "vcrpy<2.0"
 #
-# For Python 3.4+:
+# For Python 3.5+:
 #   pip install pytest pytest-cov vcrpy
 #
 # Note: This file uses environment markers for compatibility

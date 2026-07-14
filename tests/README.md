@@ -87,10 +87,10 @@ pytest tests/
 
 ## Python Version Compatibility
 
-Tests are designed to run on Python 2.6 through 3.13:
+Tests are designed to run on Python 2.7 through 3.13:
 
-- Python 2.6-2.7: Uses older pytest (<5.0) and vcrpy (<2.0)
-- Python 3.4-3.5: Uses pytest (<6.2) and vcrpy (<4.0)
+- Python 2.7: Uses older pytest (<5.0) and vcrpy (<2.0)
+- Python 3.5: Uses pytest (<6.2) and vcrpy (<4.0)
 - Python 3.6+: Uses latest pytest and vcrpy
 
 ## Code Coverage
@@ -103,7 +103,7 @@ Coverage reports are generated in:
 ## CI/CD
 
 GitHub Actions automatically runs tests on:
-- Python 2.7 (ubuntu-20.04)
+- Python 2.7 (ubuntu-20.04) - minimum supported version
 - Python 3.5-3.6 (ubuntu-20.04)
 - Python 3.7-3.13 (ubuntu-latest)
 

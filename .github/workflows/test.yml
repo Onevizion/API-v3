@@ -19,7 +19,7 @@ jobs:
             os: ubuntu-20.04
             toxenv: py27
 
-          # Python 3.x on latest Ubuntu
+          # Python 3.5+ on Ubuntu
           - python-version: "3.5"
             os: ubuntu-20.04
             toxenv: py35
