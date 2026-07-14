@@ -4,6 +4,9 @@
 # Main dependency
 requests>=2.20.0
 
+# Python 2.7 backports
+enum34; python_version < '3.4'
+
 # Testing dependencies (Python 2.7 compatible versions)
 pytest<5.0; python_version < '3.0'
 pytest>=7.0; python_version >= '3.6'
