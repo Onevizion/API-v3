@@ -19,6 +19,7 @@ jobs:
   test:
     name: Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    # Docker containers are automatically cached by GitHub Actions runners
     container: ${{ matrix.container }}
     timeout-minutes: 15
 
@@ -26,18 +27,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Python 2.7 (use container, faster than ubuntu-20.04 runner)
+          # Python 2.7 (use container)
           - python-version: "2.7"
             os: ubuntu-latest
             container: python:2.7
 
-          # Python 3.5-3.6 (need ubuntu-20.04)
+          # Python 3.5-3.6 (use container, no longer available via setup-python)
           - python-version: "3.5"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: python:3.5
             toxenv: py35
 
           - python-version: "3.6"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: python:3.6
             toxenv: py36
 
           # Python 3.7-3.10 (need ubuntu-22.04, not available on 24.04)
@@ -75,6 +78,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
+        if: matrix.container == ''
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
