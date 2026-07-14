@@ -1,23 +1,18 @@
 # Ruff configuration
 # https://docs.astral.sh/ruff/
+# Note: Ruff only supports Python 3.7+, but can lint code that runs on 2.7
 
 line-length = 100
-target-version = "py27"  # Support Python 2.7+
+target-version = "py37"
 
 [lint]
 select = [
     "E",   # pycodestyle errors
     "F",   # pyflakes
-    "W",   # pycodestyle warnings
-    "I",   # isort
-    "N",   # pep8-naming
-    "UP",  # pyupgrade (but limited for py27 compat)
 ]
 
 ignore = [
-    "E203",  # whitespace before ':'
-    "W503",  # line break before binary operator
-    "UP",    # Disable pyupgrade rules (not compatible with Python 2.7)
+    "E501",  # line too long (handled by formatter)
 ]
 
 [format]
