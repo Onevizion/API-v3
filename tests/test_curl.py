@@ -111,45 +111,69 @@ class TestCurlHTTP(object):
         c = curl(method='DELETE', url='https://httpbin.org/delete')
         assert c.request.status_code == 200
 
-    @vcr.use_cassette('tests/fixtures/cassettes/test_404_error.yaml')
-    def test_error_404(self):
+    @mock.patch('requests.request')
+    def test_error_404(self, mock_request):
         """Test handling of 404 error."""
-        c = curl(method='GET', url='https://httpbin.org/status/404')
+        # Mock 404 response
+        mock_response = mock.Mock()
+        mock_response.status_code = 404
+        mock_response.reason = 'Not Found'
+        mock_response.text = 'Not Found'
+        mock_request.return_value = mock_response
+
+        c = curl(method='GET', url='https://test.example.com/notfound')
         assert c.request.status_code == 404
         assert len(c.errors) > 0
         assert '404' in c.errors[0]
 
-    @vcr.use_cassette('tests/fixtures/cassettes/test_500_error.yaml')
-    def test_error_500(self):
+    @mock.patch('requests.request')
+    def test_error_500(self, mock_request):
         """Test handling of 500 error."""
-        c = curl(method='GET', url='https://httpbin.org/status/500')
+        # Mock 500 response
+        mock_response = mock.Mock()
+        mock_response.status_code = 500
+        mock_response.reason = 'Internal Server Error'
+        mock_response.text = 'Server Error'
+        mock_request.return_value = mock_response
+
+        c = curl(method='GET', url='https://test.example.com/error')
         assert c.request.status_code == 500
         assert len(c.errors) > 0
         assert '500' in c.errors[0]
 
-    @vcr.use_cassette('tests/fixtures/cassettes/test_custom_headers.yaml')
-    def test_custom_headers(self):
+    @mock.patch('requests.request')
+    def test_custom_headers(self, mock_request):
         """Test request with custom headers."""
+        # Mock successful response
+        mock_response = mock.Mock()
+        mock_response.status_code = 200
+        mock_response.text = '{"headers": {"User-Agent": "onevizion-test/1.0"}}'
+        mock_request.return_value = mock_response
+
         headers = {
             'User-Agent': 'onevizion-test/1.0',
             'X-Custom-Header': 'test-value'
         }
         c = curl(
             method='GET',
-            url='https://httpbin.org/headers',
+            url='https://test.example.com/headers',
             headers=headers
         )
         assert c.request.status_code == 200
         assert 'headers' in c.jsonData
 
-    def test_manual_run_query(self):
+    @mock.patch('requests.request')
+    def test_manual_run_query(self, mock_request):
         """Test manually calling runQuery after initialization."""
-        c = curl(method='GET')
-        c.url = 'https://httpbin.org/get'
+        # Mock successful response
+        mock_response = mock.Mock()
+        mock_response.status_code = 200
+        mock_response.text = '{"method": "GET"}'
+        mock_request.return_value = mock_response
 
-        # Use VCR for this test
-        with vcr.use_cassette('tests/fixtures/cassettes/test_manual_run.yaml'):
-            c.runQuery()
+        c = curl(method='GET')
+        c.url = 'https://test.example.com/test'
+        c.runQuery()
 
         assert c.request is not None
         assert c.request.status_code == 200
@@ -165,10 +189,16 @@ class TestCurlJSON(object):
         assert c.jsonData is not None
         assert isinstance(c.jsonData, dict)
 
-    @vcr.use_cassette('tests/fixtures/cassettes/test_non_json_response.yaml')
-    def test_non_json_response(self):
+    @mock.patch('requests.request')
+    def test_non_json_response(self, mock_request):
         """Test handling of non-JSON response."""
-        c = curl(method='GET', url='https://httpbin.org/html')
+        # Mock HTML response
+        mock_response = mock.Mock()
+        mock_response.status_code = 200
+        mock_response.text = '<html><body>Hello</body></html>'
+        mock_request.return_value = mock_response
+
+        c = curl(method='GET', url='https://test.example.com/html')
         # Should not raise error, just leave jsonData empty
         assert c.jsonData == {}
         assert c.request.status_code == 200
