@@ -6,20 +6,31 @@ on:
   pull_request:
     branches: [ master, develop ]
 
+# Cancel in-progress runs when a new workflow with the same group name is triggered
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Minimal permissions for security
+permissions:
+  contents: read
+
 jobs:
   test:
-    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    name: Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Python 2.7 (requires ubuntu-20.04, last version with py27)
+          # Python 2.7 (ubuntu-20.04 has it pre-installed)
           - python-version: "2.7"
             os: ubuntu-20.04
             toxenv: py27
 
-          # Python 3.5+ on Ubuntu
+          # Python 3.5-3.6 (need ubuntu-20.04)
           - python-version: "3.5"
             os: ubuntu-20.04
             toxenv: py35
@@ -28,6 +39,7 @@ jobs:
             os: ubuntu-20.04
             toxenv: py36
 
+          # Python 3.7+ on latest Ubuntu
           - python-version: "3.7"
             os: ubuntu-latest
             toxenv: py37
@@ -47,6 +59,7 @@ jobs:
           - python-version: "3.11"
             os: ubuntu-latest
             toxenv: py311
+            upload-coverage: true  # Only upload from one version
 
           - python-version: "3.12"
             os: ubuntu-latest
@@ -57,53 +70,97 @@ jobs:
             toxenv: py313
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'  # Cache pip dependencies
+          cache-dependency-path: |
+            requirements-dev.txt
+            setup.py
+
+      - name: Cache tox environments
+        uses: actions/cache@v4
+        with:
+          path: .tox
+          key: tox-${{ matrix.toxenv }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'setup.py') }}
+          restore-keys: |
+            tox-${{ matrix.toxenv }}-
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install tox tox-gh-actions
+          python -m pip install --upgrade pip wheel
+          pip install tox
 
       - name: Run tests with tox
         run: tox -e ${{ matrix.toxenv }}
 
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.11'
-        uses: codecov/codecov-action@v3
+        if: matrix.upload-coverage == true && success()
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
           fail_ci_if_error: false
+          flags: python-${{ matrix.python-version }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Archive coverage HTML report
-        if: matrix.python-version == '3.11'
-        uses: actions/upload-artifact@v3
+      - name: Upload coverage HTML report
+        if: matrix.upload-coverage == true && success()
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage-html
+          name: coverage-html-py${{ matrix.python-version }}
           path: htmlcov/
+          retention-days: 7
 
   lint:
-    name: Linting
+    name: Code Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install linting tools
         run: |
           python -m pip install --upgrade pip
           pip install flake8 black
 
-      - name: Run flake8
-        run: flake8 onevizion/ --count --select=E9,F63,F7,F82 --show-source --statistics
+      - name: Check code style with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 onevizion/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 onevizion/ --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
 
       - name: Check code formatting with black
-        run: black --check onevizion/
+        run: black --check --diff onevizion/
+
+  # Summary job that all checks must pass
+  check:
+    name: All Tests Passed
+    if: always()
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check test matrix status
+        if: needs.test.result != 'success'
+        run: exit 1
+
+      - name: Check lint status
+        if: needs.lint.result != 'success'
+        run: exit 1
+
+      - name: All checks passed
+        run: echo "✅ All tests and lint checks passed!"
