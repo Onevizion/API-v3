@@ -19,16 +19,17 @@ jobs:
   test:
     name: Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
     timeout-minutes: 15
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Python 2.7 (ubuntu-20.04 has it pre-installed)
+          # Python 2.7 (use container, faster than ubuntu-20.04 runner)
           - python-version: "2.7"
-            os: ubuntu-20.04
-            toxenv: py27
+            os: ubuntu-latest
+            container: python:2.7
 
           # Python 3.5-3.6 (need ubuntu-20.04)
           - python-version: "3.5"
