@@ -32,3 +32,6 @@ ruff>=0.1.0; python_version >= '3.7'
 # Type checking (Python 3.7+ only)
 mypy>=0.900; python_version >= '3.7'
 types-requests; python_version >= '3.7'
+
+# Environment variables (Python 3.5+ only)
+python-dotenv>=0.19.0; python_version >= '3.5'
