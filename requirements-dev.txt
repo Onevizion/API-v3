@@ -1,0 +1,18 @@
+# Development dependencies for Python 2.7 and 3.x
+# This file is used by CI for Python versions < 3.6 where uv is not available
+
+# Main dependency
+requests>=2.20.0
+
+# Testing dependencies (Python 2.7 compatible versions)
+pytest<5.0; python_version < '3.0'
+pytest>=7.0; python_version >= '3.6'
+pytest-cov<2.6; python_version < '3.0'
+pytest-cov>=4.0; python_version >= '3.6'
+vcrpy<2.0; python_version < '3.0'
+vcrpy>=4.0; python_version >= '3.6'
+mock; python_version < '3.0'
+python-dotenv>=0.19.0; python_version >= '3.5'
+
+# TOML support for coverage (needed to read pyproject.toml)
+toml

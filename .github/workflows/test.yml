@@ -93,9 +93,8 @@ jobs:
         if: matrix.container != ''
         run: |
           python -m pip install --upgrade 'pip<21.0' 'setuptools<45' wheel
-          pip install 'requests>=2.20.0'
+          pip install -r requirements-dev.txt
           pip install .
-          pip install 'pytest<5.0' 'pytest-cov<2.6' 'vcrpy<2.0' 'mock' 'toml'
 
       - name: Run tests with uv (Python >= 3.6)
         if: matrix.container == ''
