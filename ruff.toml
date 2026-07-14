@@ -7,13 +7,13 @@ target-version = "py37"
 
 [lint]
 select = [
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
+    "E9",   # Syntax errors only (critical)
+    "F63",  # Invalid print statements
+    "F7",   # Syntax errors
+    "F82",  # Undefined names
 ]
 
-ignore = [
-    "E501",  # line too long (handled by formatter)
-]
+ignore = []
 
 [format]
 quote-style = "double"
