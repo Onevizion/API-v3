@@ -8,8 +8,10 @@ import os
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
     from unittest import mock
+    from importlib import reload
 else:
     import mock
+    reload = reload  # reload is a builtin in Python 2
 
 import fcntl
 import onevizion
@@ -65,7 +67,7 @@ class TestSingletonInit(object):
         import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
-            importlib.reload(singleton_mod)
+            reload(singleton_mod)
             s = singleton_mod.Singleton(LockFileName=lock_file, QuitMode="none")
             # foundProcess=True because Quit() was called
             assert s.foundProcess is True
@@ -80,7 +82,7 @@ class TestSingletonInit(object):
         import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
-            importlib.reload(singleton_mod)
+            reload(singleton_mod)
             with pytest.raises(SystemExit) as exc_info:
                 singleton_mod.Singleton(LockFileName=lock_file, QuitMode="error")
             assert exc_info.value.code == -1
@@ -93,7 +95,7 @@ class TestSingletonInit(object):
         import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
-            importlib.reload(singleton_mod)
+            reload(singleton_mod)
             with pytest.raises(SystemExit):
                 singleton_mod.Singleton(LockFileName=lock_file, QuitMode="silent")
         importlib.reload(singleton_mod)
@@ -118,7 +120,7 @@ class TestSingletonInit(object):
         import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
-            importlib.reload(singleton_mod)
+            reload(singleton_mod)
             s = singleton_mod.Singleton(LockFileName=lock_file, QuitMode="none", Msg=None)
             assert s.foundProcess is True
         captured = capsys.readouterr()
@@ -133,7 +135,7 @@ class TestSingletonInit(object):
         import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
-            importlib.reload(singleton_mod)
+            reload(singleton_mod)
             singleton_mod.Singleton(LockFileName=lock_file, QuitMode="none", Msg="Already running!")
         captured = capsys.readouterr()
         assert "Already running!" in captured.out
@@ -147,7 +149,7 @@ class TestSingletonInit(object):
         import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
-            importlib.reload(singleton_mod)
+            reload(singleton_mod)
             singleton_mod.Singleton(LockFileName=lock_file, QuitMode="none", Msg="")
         captured = capsys.readouterr()
         assert captured.out == ""

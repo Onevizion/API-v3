@@ -153,10 +153,10 @@ class TestEMailSendmail(object):
         mock_smtp_cls.return_value = mock_smtp
         email = self._make_email(security="STARTTLS")
         email.sendmail()
-        mock_smtp.starttls.assert_called_once()
-        mock_smtp.login.assert_called_once()
-        mock_smtp.sendmail.assert_called_once()
-        mock_smtp.quit.assert_called_once()
+        assert mock_smtp.starttls.call_count == 1
+        assert mock_smtp.login.call_count == 1
+        assert mock_smtp.sendmail.call_count == 1
+        assert mock_smtp.quit.call_count == 1
 
     @mock.patch("smtplib.SMTP")
     def test_sendmail_tls_alias(self, mock_smtp_cls):
@@ -164,7 +164,7 @@ class TestEMailSendmail(object):
         mock_smtp_cls.return_value = mock_smtp
         email = self._make_email(security="TLS")
         email.sendmail()
-        mock_smtp.starttls.assert_called_once()
+        assert mock_smtp.starttls.call_count == 1
 
     @mock.patch("smtplib.SMTP_SSL")
     def test_sendmail_ssl(self, mock_smtp_ssl_cls):
@@ -172,8 +172,8 @@ class TestEMailSendmail(object):
         mock_smtp_ssl_cls.return_value = mock_smtp
         email = self._make_email(security="SSL")
         email.sendmail()
-        mock_smtp.login.assert_called_once()
-        mock_smtp.sendmail.assert_called_once()
+        assert mock_smtp.login.call_count == 1
+        assert mock_smtp.sendmail.call_count == 1
 
     @mock.patch("smtplib.SMTP_SSL")
     def test_sendmail_ssl_tls_alias(self, mock_smtp_ssl_cls):
@@ -181,7 +181,7 @@ class TestEMailSendmail(object):
         mock_smtp_ssl_cls.return_value = mock_smtp
         email = self._make_email(security="SSL/TLS")
         email.sendmail()
-        mock_smtp_ssl_cls.assert_called_once()
+        assert mock_smtp_ssl_cls.call_count == 1
 
     @mock.patch("smtplib.SMTP")
     def test_sendmail_no_security(self, mock_smtp_cls):
@@ -190,7 +190,7 @@ class TestEMailSendmail(object):
         email = self._make_email(security="NONE")
         email.sendmail()
         mock_smtp.starttls.assert_not_called()
-        mock_smtp.login.assert_called_once()
+        assert mock_smtp.login.call_count == 1
 
     @mock.patch("smtplib.SMTP")
     def test_sendmail_with_info_dict(self, mock_smtp_cls):
@@ -239,7 +239,7 @@ class TestEMailSendmail(object):
         email = self._make_email()
         email.files = [str(txt_file)]
         email.sendmail()
-        mock_smtp.sendmail.assert_called_once()
+        assert mock_smtp.sendmail.call_count == 1
 
     @mock.patch("smtplib.SMTP")
     def test_sendmail_with_binary_attachment(self, mock_smtp_cls, tmp_path):
@@ -250,7 +250,7 @@ class TestEMailSendmail(object):
         email = self._make_email()
         email.files = [str(bin_file)]
         email.sendmail()
-        mock_smtp.sendmail.assert_called_once()
+        assert mock_smtp.sendmail.call_count == 1
 
     @mock.patch("smtplib.SMTP")
     def test_sendmail_with_info_non_string_value(self, mock_smtp_cls):
