@@ -12,6 +12,7 @@ else:
     import mock
 
 import requests
+import onevizion.workplan
 from onevizion.workplan import WorkPlan
 
 

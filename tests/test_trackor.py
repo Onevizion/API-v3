@@ -14,6 +14,7 @@ else:
     import mock
 
 import requests
+import onevizion.trackor
 from onevizion.trackor import Trackor
 
 

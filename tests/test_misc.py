@@ -14,6 +14,10 @@ else:
     import mock
 
 import requests
+import onevizion.ovimport
+import onevizion.module.log
+import onevizion.notif.queue
+import onevizion.notif.service
 from onevizion.ovimport import OVImport
 from onevizion.module.log import ModuleLog, IntegrationLog
 from onevizion.module.loglevel import LogLevel

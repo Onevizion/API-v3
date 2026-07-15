@@ -12,6 +12,7 @@ else:
     import mock
 
 import requests
+import onevizion.task
 from onevizion.task import Task
 
 
