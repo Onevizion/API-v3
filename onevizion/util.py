@@ -147,10 +147,11 @@ def EFileEncode(FilePath,NewFileName=None):
 	with open(FilePath,"rb") as f:
 		EncodedFile = base64.b64encode(f.read())
 
-	#python3 compatibility
-	if isinstance(EncodedFile, bytes):
-	   File["data"]=EncodedFile.decode()
+	#python3 compatibility - in Python 3, b64encode returns bytes, in Python 2 it returns str
+	import sys
+	if sys.version_info[0] >= 3:
+		File["data"]=EncodedFile.decode()
 	else:
-	   File["data"]=EncodedFile
+		File["data"]=EncodedFile
 
 	return File
