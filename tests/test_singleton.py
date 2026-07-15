@@ -64,7 +64,6 @@ class TestSingletonInit(object):
         Execution continues so initialized is still set to True at end of __init__."""
         lock_file = str(tmp_path / "collision.lck")
         mock_fcntl = _fcntl_mock(side_effect=IOError("locked"))
-        import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
             reload(singleton_mod)
@@ -79,7 +78,6 @@ class TestSingletonInit(object):
         """IOError from lockf causes sys.exit(-1) when QuitMode='error'."""
         lock_file = str(tmp_path / "err_mode.lck")
         mock_fcntl = _fcntl_mock(side_effect=IOError("locked"))
-        import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
             reload(singleton_mod)
@@ -92,7 +90,6 @@ class TestSingletonInit(object):
         """IOError from lockf causes quit() when QuitMode='silent'."""
         lock_file = str(tmp_path / "silent_mode.lck")
         mock_fcntl = _fcntl_mock(side_effect=IOError("locked"))
-        import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
             reload(singleton_mod)
@@ -117,7 +114,6 @@ class TestSingletonInit(object):
         onevizion.Config["Verbosity"] = 0
         lock_file = str(tmp_path / "no_msg.lck")
         mock_fcntl = _fcntl_mock(side_effect=IOError("locked"))
-        import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
             reload(singleton_mod)
@@ -132,7 +128,6 @@ class TestSingletonInit(object):
         onevizion.Config["Verbosity"] = 0
         lock_file = str(tmp_path / "msg.lck")
         mock_fcntl = _fcntl_mock(side_effect=IOError("locked"))
-        import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
             reload(singleton_mod)
@@ -146,7 +141,6 @@ class TestSingletonInit(object):
         onevizion.Config["Verbosity"] = 0
         lock_file = str(tmp_path / "empty_msg.lck")
         mock_fcntl = _fcntl_mock(side_effect=IOError("locked"))
-        import importlib
         import onevizion.singleton as singleton_mod
         with mock.patch.dict("sys.modules", {"fcntl": mock_fcntl}):
             reload(singleton_mod)

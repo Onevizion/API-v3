@@ -64,7 +64,7 @@ def GetParameters(parameterFile=None):
 		print (ParameterExample)
 		quit()
 
-	with open(parameterFile,"rb") as ParameterFile:
+	with open(parameterFile,"r") as ParameterFile:
 		ParameterData = json.load(ParameterFile)
 	onevizion.Config["ParameterData"] = ParameterData
 	onevizion.Config["ParameterFile"] = parameterFile
