@@ -72,7 +72,7 @@ class TestSingletonInit(object):
             assert s.foundProcess is True
             # initialized=True because execution continues after Quit() in 'none' mode
             assert s.initialized is True
-        importlib.reload(singleton_mod)
+        reload(singleton_mod)
 
     def test_collision_error_mode_exits(self, tmp_path):
         """IOError from lockf causes sys.exit(-1) when QuitMode='error'."""
@@ -84,7 +84,7 @@ class TestSingletonInit(object):
             with pytest.raises(SystemExit) as exc_info:
                 singleton_mod.Singleton(LockFileName=lock_file, QuitMode="error")
             assert exc_info.value.code == -1
-        importlib.reload(singleton_mod)
+        reload(singleton_mod)
 
     def test_collision_silent_mode_quits(self, tmp_path):
         """IOError from lockf causes quit() when QuitMode='silent'."""
@@ -95,7 +95,7 @@ class TestSingletonInit(object):
             reload(singleton_mod)
             with pytest.raises(SystemExit):
                 singleton_mod.Singleton(LockFileName=lock_file, QuitMode="silent")
-        importlib.reload(singleton_mod)
+        reload(singleton_mod)
 
     def test_singleton_del_cleans_up_lock_file(self, tmp_path):
         """After deletion, the lock file is removed."""
@@ -121,7 +121,7 @@ class TestSingletonInit(object):
             assert s.foundProcess is True
         captured = capsys.readouterr()
         assert captured.out == ""
-        importlib.reload(singleton_mod)
+        reload(singleton_mod)
 
     def test_custom_msg_printed_on_collision(self, tmp_path, capsys):
         """Custom Msg is printed when a process collision occurs."""
@@ -134,7 +134,7 @@ class TestSingletonInit(object):
             singleton_mod.Singleton(LockFileName=lock_file, QuitMode="none", Msg="Already running!")
         captured = capsys.readouterr()
         assert "Already running!" in captured.out
-        importlib.reload(singleton_mod)
+        reload(singleton_mod)
 
     def test_empty_msg_no_output(self, tmp_path, capsys):
         """Empty Msg string produces no output."""
@@ -147,4 +147,4 @@ class TestSingletonInit(object):
             singleton_mod.Singleton(LockFileName=lock_file, QuitMode="none", Msg="")
         captured = capsys.readouterr()
         assert captured.out == ""
-        importlib.reload(singleton_mod)
+        reload(singleton_mod)
