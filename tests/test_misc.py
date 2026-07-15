@@ -510,7 +510,7 @@ if sys.version_info[0] >= 3:
                 "blobDataIds": [],
             }
 
-        @mock.patch("onevizion.notif.queue.curl", create=True)
+        @mock.patch("onevizion.module.log.curl", create=True)
         @mock.patch("onevizion.notif.queue.curl", create=True)
         def test_start_sends_all_queued_records(self, mock_queue_curl, mock_log_curl):
             mock_queue_curl.return_value = make_mock_curl(
@@ -532,7 +532,7 @@ if sys.version_info[0] >= 3:
             svc.start()
             assert len(svc.sent) == 2
 
-        @mock.patch("onevizion.notif.queue.curl", create=True)
+        @mock.patch("onevizion.module.log.curl", create=True)
         @mock.patch("onevizion.notif.queue.curl", create=True)
         def test_start_handles_send_failure(self, mock_queue_curl, mock_log_curl):
             mock_queue_curl.return_value = make_mock_curl(
@@ -556,7 +556,7 @@ if sys.version_info[0] >= 3:
             # No records sent since sendNotification raises
             assert len(svc.sent) == 0
 
-        @mock.patch("onevizion.notif.queue.curl", create=True)
+        @mock.patch("onevizion.module.log.curl", create=True)
         @mock.patch("onevizion.notif.queue.curl", create=True)
         def test_start_with_empty_queue(self, mock_queue_curl, mock_log_curl):
             mock_queue_curl.return_value = make_mock_curl(json_data=[])
@@ -576,7 +576,7 @@ if sys.version_info[0] >= 3:
             svc.start()
             assert len(svc.sent) == 0
 
-        @mock.patch("onevizion.notif.queue.curl", create=True)
+        @mock.patch("onevizion.module.log.curl", create=True)
         @mock.patch("onevizion.notif.queue.curl", create=True)
         def test_start_retries_on_failure(self, mock_queue_curl, mock_log_curl):
             """With maxAttempts=2 and time.sleep mocked, ensure loop runs twice."""
@@ -618,7 +618,7 @@ if sys.version_info[0] >= 3:
             result = NotificationService._convertNotifQueueJsonToList([])
             assert result == []
 
-        @mock.patch("onevizion.notif.queue.curl", create=True)
+        @mock.patch("onevizion.module.log.curl", create=True)
         @mock.patch("onevizion.notif.queue.curl", create=True)
         def test_get_integration_log_emits_warning(self, mock_queue_curl, mock_log_curl):
             """Accessing _integrationLog attribute emits DeprecationWarning."""
