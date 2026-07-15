@@ -416,7 +416,7 @@ class Trackor(object):
 			if not cd:
 				return None
 			import re
-			fname = re.findall("filename[\*]*=(?:UTF-8'')*(.+)", cd)
+			fname = re.findall(r"filename[\*]*=(?:UTF-8'')*(.+)", cd)
 			if len(fname) == 0:
 				return None
 			return fname[0]

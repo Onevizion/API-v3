@@ -81,10 +81,15 @@ class Singleton(object):
 					os.close(self.LockFileName)
 					os.unlink(self.LockFileName)
 			else:
-				fcntl.lockf(self.LockFile, fcntl.LOCK_UN)
+				try:
+					import fcntl
+					fcntl.lockf(self.LockFile, fcntl.LOCK_UN)
+				except (ImportError, NameError):
+					pass  # fcntl not available (e.g., during testing or on Windows)
 				# os.close(self.fp)
 				if os.path.isfile(self.LockFileName):
 					os.unlink(self.LockFileName)
 		except Exception as e:
-			Message("Unknown error: %s" % e)
+			if hasattr(self, 'Msg') and self.Msg:
+				Message("Unknown error: %s" % e)
 			sys.exit(-1)

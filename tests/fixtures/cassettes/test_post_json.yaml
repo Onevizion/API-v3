@@ -1,0 +1,47 @@
+interactions:
+- request:
+    body: '{"key": "value", "number": 42}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '30'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.34.2
+    method: POST
+    uri: https://httpbin.org/post
+  response:
+    body:
+      string: "{\n  \"args\": {}, \n  \"data\": \"{\\\"key\\\": \\\"value\\\", \\\"number\\\":
+        42}\", \n  \"files\": {}, \n  \"form\": {}, \n  \"headers\": {\n    \"Accept\":
+        \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate\", \n    \"Content-Length\":
+        \"30\", \n    \"Content-Type\": \"application/json\", \n    \"Host\": \"httpbin.org\",
+        \n    \"User-Agent\": \"python-requests/2.34.2\", \n    \"X-Amzn-Trace-Id\":
+        \"Root=1-6a56472e-4665f8497b795c030ac64006\"\n  }, \n  \"json\": {\n    \"key\":
+        \"value\", \n    \"number\": 42\n  }, \n  \"origin\": \"50.47.231.156\", \n
+        \ \"url\": \"https://httpbin.org/post\"\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '516'
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 14 Jul 2026 14:26:56 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

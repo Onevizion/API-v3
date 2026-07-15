@@ -1,0 +1,33 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - python-requests/2.34.2
+    method: GET
+    uri: https://httpbin.org/json
+  response:
+    body:
+      string: "<html>\r\n<head><title>503 Service Temporarily Unavailable</title></head>\r\n<body>\r\n<center><h1>503
+        Service Temporarily Unavailable</h1></center>\r\n</body>\r\n</html>\r\n"
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '162'
+      Content-Type:
+      - text/html
+      Date:
+      - Tue, 14 Jul 2026 14:27:27 GMT
+      Server:
+      - awselb/2.0
+    status:
+      code: 503
+      message: Service Temporarily Unavailable
+version: 1

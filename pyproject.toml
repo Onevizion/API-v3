@@ -1,0 +1,98 @@
+[project]
+name = "onevizion"
+version = "1.1.7"
+description = "OneVizion API v3 wrapper for Python"
+readme = "README.md"
+requires-python = ">=2.7"
+license = {text = "MIT"}
+authors = [
+    {name = "OneVizion", email = "development@onevizion.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Unix",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 2",
+    "Programming Language :: Python :: 2.7",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "requests>=2.20.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0; python_version >= '3.6'",
+    "pytest<5.0; python_version < '3.0'",
+    "pytest-cov>=4.0; python_version >= '3.6'",
+    "pytest-cov<2.6; python_version < '3.0'",
+    "vcrpy>=4.0; python_version >= '3.6'",
+    "vcrpy<2.0; python_version < '3.0'",
+    "python-dotenv>=0.19.0; python_version >= '3.5'",
+    "ruff>=0.1.0; python_version >= '3.7'",
+    "mock; python_version < '3.0'",
+]
+
+[project.urls]
+Homepage = "https://github.com/Onevizion/API-v3"
+Repository = "https://github.com/Onevizion/API-v3"
+
+[build-system]
+requires = ["setuptools>=40.8.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["onevizion", "onevizion.module", "onevizion.notif"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--cov=onevizion",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+
+[tool.coverage.run]
+source = ["onevizion"]
+omit = ["*/tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py37"
+
+[tool.ruff.lint]
+select = [
+    "E9",   # Syntax errors only
+    "F63",  # Invalid print statements
+    "F7",   # Syntax errors
+    "F82",  # Undefined names
+]
+ignore = []

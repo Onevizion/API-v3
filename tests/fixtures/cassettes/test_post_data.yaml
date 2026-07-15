@@ -1,0 +1,46 @@
+interactions:
+- request:
+    body: field1=value1&field2=value2
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '27'
+      Content-Type:
+      - application/x-www-form-urlencoded
+      User-Agent:
+      - python-requests/2.34.2
+    method: POST
+    uri: https://httpbin.org/post
+  response:
+    body:
+      string: "{\n  \"args\": {}, \n  \"data\": \"\", \n  \"files\": {}, \n  \"form\":
+        {\n    \"field1\": \"value1\", \n    \"field2\": \"value2\"\n  }, \n  \"headers\":
+        {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate\",
+        \n    \"Content-Length\": \"27\", \n    \"Content-Type\": \"application/x-www-form-urlencoded\",
+        \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.34.2\",
+        \n    \"X-Amzn-Trace-Id\": \"Root=1-6a564731-71ce2ba35506128372a12584\"\n
+        \ }, \n  \"json\": null, \n  \"origin\": \"50.47.231.156\", \n  \"url\": \"https://httpbin.org/post\"\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '509'
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 14 Jul 2026 14:26:58 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,5 +1,11 @@
 from onevizion.util import *
-from abc import ABC, abstractmethod
+import sys
+if sys.version_info[0] >= 3:
+    from abc import ABC, abstractmethod
+else:
+    from abc import ABCMeta, abstractmethod
+    # Python 2 compatibility - create ABC-like base
+    ABC = ABCMeta('ABC', (object,), {'__module__': __name__})
 from onevizion.module.log import IntegrationLog, ModuleLog
 from onevizion.module.loglevel import LogLevel
 from onevizion.notif.queue import NotifQueue
@@ -37,7 +43,7 @@ class NotificationService(ABC):
 
 	def __getattribute__(self, item):
 		if '_integrationLog' == item:
-			warn(f'{item} is deprecated. Use _moduleLog instead.', DeprecationWarning, stacklevel=2)
+			warn('{0} is deprecated. Use _moduleLog instead.'.format(item), DeprecationWarning, stacklevel=2)
 
 		return object.__getattribute__(self, item)
 
