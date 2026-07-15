@@ -27,51 +27,62 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Python 2.7 (use container)
+          # Core versions - always test these
+          - python-version: "3.11"
+            os: ubuntu-latest
+            toxenv: py311
+            upload-coverage: true
+
+          - python-version: "3.13"
+            os: ubuntu-latest
+            toxenv: py313
+
+          # Legacy Python 2.7 (container)
           - python-version: "2.7"
             os: ubuntu-latest
             container: python:2.7
 
-          # Python 3.5-3.6 (use container, no longer available via setup-python)
+          # Extended compatibility - only on push to master/develop
           - python-version: "3.5"
             os: ubuntu-latest
             container: python:3.5
             toxenv: py35
+            extended: true
 
           - python-version: "3.6"
             os: ubuntu-latest
             container: python:3.6
             toxenv: py36
+            extended: true
 
-          # Python 3.7-3.10 (need ubuntu-22.04, not available on 24.04)
           - python-version: "3.7"
             os: ubuntu-22.04
             toxenv: py37
+            extended: true
 
           - python-version: "3.8"
             os: ubuntu-22.04
             toxenv: py38
+            extended: true
 
           - python-version: "3.9"
             os: ubuntu-22.04
             toxenv: py39
+            extended: true
 
           - python-version: "3.10"
             os: ubuntu-22.04
             toxenv: py310
-
-          - python-version: "3.11"
-            os: ubuntu-latest
-            toxenv: py311
-            upload-coverage: true  # Only upload from one version
+            extended: true
 
           - python-version: "3.12"
             os: ubuntu-latest
             toxenv: py312
-
-          - python-version: "3.13"
-            os: ubuntu-latest
-            toxenv: py313
+            extended: true
+        exclude:
+          # Skip extended tests on PRs
+          - extended: true
+            ${{ github.event_name == 'pull_request' }}
 
     steps:
       - name: Checkout code
