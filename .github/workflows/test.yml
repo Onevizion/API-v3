@@ -21,68 +21,49 @@ jobs:
     runs-on: ${{ matrix.os }}
     # Docker containers are automatically cached by GitHub Actions runners
     container: ${{ matrix.container }}
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Core versions - always test these
-          - python-version: "3.11"
-            os: ubuntu-latest
-            toxenv: py311
-            upload-coverage: true
-
-          - python-version: "3.13"
-            os: ubuntu-latest
-            toxenv: py313
-
-          # Legacy Python 2.7 (container)
+          # Python 2.7 (container)
           - python-version: "2.7"
             os: ubuntu-latest
             container: python:2.7
 
-          # Extended compatibility - only on push to master/develop
+          # Python 3.5-3.6 (container)
           - python-version: "3.5"
             os: ubuntu-latest
             container: python:3.5
-            toxenv: py35
-            extended: true
 
           - python-version: "3.6"
             os: ubuntu-latest
             container: python:3.6
-            toxenv: py36
-            extended: true
 
+          # Python 3.7-3.10 (ubuntu-22.04)
           - python-version: "3.7"
             os: ubuntu-22.04
-            toxenv: py37
-            extended: true
 
           - python-version: "3.8"
             os: ubuntu-22.04
-            toxenv: py38
-            extended: true
 
           - python-version: "3.9"
             os: ubuntu-22.04
-            toxenv: py39
-            extended: true
 
           - python-version: "3.10"
             os: ubuntu-22.04
-            toxenv: py310
-            extended: true
+
+          # Python 3.11-3.13 (latest)
+          - python-version: "3.11"
+            os: ubuntu-latest
+            upload-coverage: true
 
           - python-version: "3.12"
             os: ubuntu-latest
-            toxenv: py312
-            extended: true
-        exclude:
-          # Skip extended tests on PRs
-          - extended: true
-            ${{ github.event_name == 'pull_request' }}
+
+          - python-version: "3.13"
+            os: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -99,6 +80,15 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+
+      - name: Cache pip packages (Python < 3.6)
+        if: matrix.container != ''
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
 
       - name: Install dependencies with pip (Python < 3.6)
         if: matrix.container != ''
@@ -139,22 +129,15 @@ jobs:
   lint:
     name: Code Quality
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Run ruff linter
-        run: uv tool run ruff check onevizion/ tests/
+      - uses: astral-sh/setup-uv@v5
+      - run: uv tool run ruff check onevizion/ tests/
 
   # Summary job that all checks must pass
   check:
