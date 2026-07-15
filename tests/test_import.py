@@ -13,6 +13,7 @@ if sys.version_info[0] >= 3:
 else:
     import mock
 
+import onevizion.Import
 from onevizion.Import import Import
 
 

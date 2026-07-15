@@ -12,6 +12,7 @@ else:
     import mock
 
 import requests
+import onevizion.export
 from onevizion.export import Export
 
 
