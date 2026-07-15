@@ -90,7 +90,7 @@ class TestWorkPlanInit(object):
 class TestWorkPlanRead(object):
     """Test WorkPlan.read() - all URL building branches."""
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.workplan.curl", create=True)
     def test_read_by_workplan_id(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 42, "name": "My Plan"})
         wp = WorkPlan(URL="https://test.onevizion.com", userName="u", password="p")
@@ -99,7 +99,7 @@ class TestWorkPlanRead(object):
         assert "/wps/42" in call_url
         assert wp.jsonData == {"wp_id": 42, "name": "My Plan"}
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.workplan.curl", create=True)
     def test_read_by_template_and_trackor(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 10})
         wp = WorkPlan(URL="https://test.onevizion.com", userName="u", password="p")
@@ -109,7 +109,7 @@ class TestWorkPlanRead(object):
         assert "trackor_type=" in call_url
         assert "trackor_id=123" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.workplan.curl", create=True)
     def test_read_resets_errors_and_json(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 1})
         wp = WorkPlan(URL="https://test.onevizion.com", userName="u", password="p")
@@ -119,7 +119,7 @@ class TestWorkPlanRead(object):
         assert wp.errors == []
         assert wp.jsonData == {"wp_id": 1}
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.workplan.curl", create=True)
     def test_read_with_http_error(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=404, errors=["404 = Not Found"]
@@ -128,7 +128,7 @@ class TestWorkPlanRead(object):
         wp.read(workplanId=999)
         assert len(wp.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.workplan.curl", create=True)
     def test_read_error_no_request_object(self, mock_curl_cls):
         bad_curl = mock.MagicMock()
         bad_curl.errors = ["Network error"]
@@ -140,7 +140,7 @@ class TestWorkPlanRead(object):
         wp.read(workplanId=1)
         assert len(wp.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.workplan.curl", create=True)
     def test_read_uses_get_method(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={})
         wp = WorkPlan(URL="https://test.onevizion.com", userName="u", password="p")

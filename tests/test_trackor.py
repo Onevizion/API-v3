@@ -115,7 +115,7 @@ class TestTrackorInit(object):
 class TestTrackorDelete(object):
     """Test Trackor delete method."""
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_delete_success(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(status_code=200, json_data={"deleted": True})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -126,7 +126,7 @@ class TestTrackorDelete(object):
         assert "DELETE" in call_args[0]
         assert "trackor_id=123" in call_args[0][1]
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_delete_with_errors(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=404, errors=["404 = Not Found\nNot found"]
@@ -135,7 +135,7 @@ class TestTrackorDelete(object):
         t.delete(trackorId=999)
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_delete_error_request_exception(self, mock_curl_cls):
         """When request itself fails (no status_code on request object)."""
         bad_curl = mock.MagicMock()
@@ -148,7 +148,7 @@ class TestTrackorDelete(object):
         t.delete(trackorId=1)
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_delete_resets_state(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"result": "ok"})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -162,7 +162,7 @@ class TestTrackorDelete(object):
 class TestTrackorRead(object):
     """Test Trackor read method - all filter/view branch combinations."""
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_read_with_trackor_id(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"TRACKOR_KEY": "PROJ-1"})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -171,7 +171,7 @@ class TestTrackorRead(object):
         assert "/trackors/42" in call_url
         assert t.jsonData == {"TRACKOR_KEY": "PROJ-1"}
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_read_with_filters_dict_and_fields(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data=[{"F_STATUS": "Active"}])
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -180,7 +180,7 @@ class TestTrackorRead(object):
         assert "trackor_types/Project/trackors" in call_url
         assert "F_STATUS" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_read_with_filter_options(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data=[])
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -188,7 +188,7 @@ class TestTrackorRead(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "filter=" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_read_with_view_options(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data=[])
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -196,7 +196,7 @@ class TestTrackorRead(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "view=" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_read_with_search_body(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data=[])
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -207,7 +207,7 @@ class TestTrackorRead(object):
         # Search uses POST
         assert mock_curl_cls.call_args[0][0] == "POST"
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_read_with_sort(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data=[])
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -215,7 +215,7 @@ class TestTrackorRead(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "sort=" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_read_with_pagination(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data=[])
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -224,7 +224,7 @@ class TestTrackorRead(object):
         assert "page=2" in call_url
         assert "per_page=50" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_read_with_errors(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=500, errors=["500 = Internal Server Error"]
@@ -233,7 +233,7 @@ class TestTrackorRead(object):
         t.read(trackorId=1)
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_read_error_no_request_object(self, mock_curl_cls):
         """Error path where request itself is None (network failure)."""
         bad_curl = mock.MagicMock()
@@ -246,7 +246,7 @@ class TestTrackorRead(object):
         t.read(trackorId=1)
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_read_resets_errors_between_calls(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data=[{"F_STATUS": "Active"}])
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -258,7 +258,7 @@ class TestTrackorRead(object):
 class TestTrackorUpdate(object):
     """Test Trackor update method."""
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_update_by_trackor_id_simple_fields(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"TRACKOR_KEY": "PROJ-1"})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -268,7 +268,7 @@ class TestTrackorUpdate(object):
         assert mock_curl_cls.call_args[0][0] == "PUT"
         assert t.errors == []
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_update_by_filters(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"TRACKOR_KEY": "PROJ-1"})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -276,7 +276,7 @@ class TestTrackorUpdate(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "trackor_types/Project/trackors" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_update_with_dict_field_value(self, mock_curl_cls):
         """Test updating a compound field like an EFile."""
         mock_curl_cls.return_value = make_mock_curl(json_data={})
@@ -287,7 +287,7 @@ class TestTrackorUpdate(object):
         )
         assert t.errors == []
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_update_with_parents(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -298,7 +298,7 @@ class TestTrackorUpdate(object):
         )
         assert t.errors == []
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_update_with_charset(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -306,7 +306,7 @@ class TestTrackorUpdate(object):
         call_kwargs = mock_curl_cls.call_args[1]
         assert "UTF-8" in call_kwargs.get("headers", {}).get("charset", "")
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_update_with_errors(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=400, errors=["400 = Bad Request\nInvalid field"]
@@ -315,7 +315,7 @@ class TestTrackorUpdate(object):
         t.update(trackorId=1, fields={"F_INVALID": "value"})
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_update_error_no_request_object(self, mock_curl_cls):
         bad_curl = mock.MagicMock()
         bad_curl.errors = ["Connection refused"]
@@ -327,7 +327,7 @@ class TestTrackorUpdate(object):
         t.update(trackorId=1, fields={"F_NAME": "test"})
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_update_none_field_value(self, mock_curl_cls):
         """None field values should be preserved (JSONEndValue returns None)."""
         mock_curl_cls.return_value = make_mock_curl(json_data={})
@@ -339,7 +339,7 @@ class TestTrackorUpdate(object):
 class TestTrackorCreate(object):
     """Test Trackor create method."""
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_create_simple_fields(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"TRACKOR_ID": 99, "TRACKOR_KEY": "PROJ-99"})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -349,14 +349,14 @@ class TestTrackorCreate(object):
         assert mock_curl_cls.call_args[0][0] == "POST"
         assert t.jsonData == {"TRACKOR_ID": 99, "TRACKOR_KEY": "PROJ-99"}
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_create_with_dict_field(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"TRACKOR_ID": 100})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
         t.create(fields={"F_FILE": {"file_name": "doc.pdf", "data": "AAAA"}})
         assert t.errors == []
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_create_with_parents(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"TRACKOR_ID": 101})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -366,7 +366,7 @@ class TestTrackorCreate(object):
         )
         assert t.errors == []
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_create_with_charset(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -374,7 +374,7 @@ class TestTrackorCreate(object):
         call_kwargs = mock_curl_cls.call_args[1]
         assert call_kwargs.get("headers", {}).get("charset") == "UTF-8"
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_create_with_errors(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=422, errors=["422 = Unprocessable Entity"]
@@ -383,7 +383,7 @@ class TestTrackorCreate(object):
         t.create(fields={"F_MISSING_REQUIRED": None})
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_create_error_no_request_object(self, mock_curl_cls):
         bad_curl = mock.MagicMock()
         bad_curl.errors = ["Timeout"]
@@ -395,7 +395,7 @@ class TestTrackorCreate(object):
         t.create(fields={"F_NAME": "Test"})
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_create_empty_fields(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"TRACKOR_ID": 50})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -406,7 +406,7 @@ class TestTrackorCreate(object):
 class TestTrackorAssignWorkplan(object):
     """Test Trackor assignWorkplan method."""
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_assign_workplan_basic(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 5})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -416,7 +416,7 @@ class TestTrackorAssignWorkplan(object):
         assert "workplan_template=Default" in call_url
         assert t.errors == []
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_assign_workplan_with_name(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 6})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -424,7 +424,7 @@ class TestTrackorAssignWorkplan(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "name=" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_assign_workplan_with_start_date_string(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 7})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -432,7 +432,7 @@ class TestTrackorAssignWorkplan(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "proj_start_date=" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_assign_workplan_with_start_date_datetime(self, mock_curl_cls):
         from datetime import datetime
         mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 8})
@@ -441,7 +441,7 @@ class TestTrackorAssignWorkplan(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "proj_start_date=" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_assign_workplan_with_finish_date_string(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 9})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -449,7 +449,7 @@ class TestTrackorAssignWorkplan(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "proj_finish_date=" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_assign_workplan_with_finish_date_datetime(self, mock_curl_cls):
         from datetime import datetime
         mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 10})
@@ -458,7 +458,7 @@ class TestTrackorAssignWorkplan(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "proj_finish_date=" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_assign_workplan_is_active(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 11})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -466,7 +466,7 @@ class TestTrackorAssignWorkplan(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "is_active=True" in call_url
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_assign_workplan_with_errors(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=404, errors=["404 = Not Found"]
@@ -475,7 +475,7 @@ class TestTrackorAssignWorkplan(object):
         t.assignWorkplan(trackorId=999, workplanTemplate="NonExistent")
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_assign_workplan_error_no_request(self, mock_curl_cls):
         bad_curl = mock.MagicMock()
         bad_curl.errors = ["Network error"]
@@ -587,7 +587,7 @@ class TestTrackorGetFile(object):
 class TestTrackorUploadFile(object):
     """Test Trackor UploadFile and UploadFileByFileContents methods."""
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_upload_file_by_contents_success(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"blob_data_id": 77})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -598,7 +598,7 @@ class TestTrackorUploadFile(object):
         assert "file_name=test.txt" in call_url
         assert t.errors == []
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_upload_file_by_contents_with_errors(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=500, errors=["500 = Server Error"]
@@ -607,7 +607,7 @@ class TestTrackorUploadFile(object):
         t.UploadFileByFileContents(trackorId=10, fieldName="F_FILE", fileName="test.txt", fileContents=b"data")
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_upload_file_by_contents_error_no_request(self, mock_curl_cls):
         bad_curl = mock.MagicMock()
         bad_curl.errors = ["Timeout"]
@@ -619,7 +619,7 @@ class TestTrackorUploadFile(object):
         t.UploadFileByFileContents(trackorId=10, fieldName="F_FILE", fileName="test.txt", fileContents=b"data")
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_upload_file_uses_basename_when_no_new_name(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"blob_data_id": 78})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -635,7 +635,7 @@ class TestTrackorUploadFile(object):
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
 
-    @mock.patch("onevizion.curl.curl")
+    @mock.patch("onevizion.trackor.curl", create=True)
     def test_upload_file_with_new_name(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"blob_data_id": 79})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
