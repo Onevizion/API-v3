@@ -10,8 +10,10 @@ import tempfile
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
     from unittest import mock
+    BUILTIN_OPEN = 'builtins.open'
 else:
     import mock
+    BUILTIN_OPEN = '__builtin__.open'
 
 import requests
 import onevizion.trackor
@@ -492,7 +494,7 @@ class TestTrackorGetFile(object):
     """Test Trackor GetFile method."""
 
     @mock.patch("onevizion.trackor.requests.get")
-    @mock.patch("builtins.open", create=True)
+    @mock.patch(BUILTIN_OPEN, create=True)
     def test_get_file_by_trackor_id_and_field_name(self, mock_open, mock_get):
         mock_response = mock.MagicMock()
         mock_response.status_code = 200
@@ -511,7 +513,7 @@ class TestTrackorGetFile(object):
         assert result is not None
 
     @mock.patch("onevizion.trackor.requests.get")
-    @mock.patch("builtins.open", create=True)
+    @mock.patch(BUILTIN_OPEN, create=True)
     def test_get_file_by_blob_data_id(self, mock_open, mock_get):
         mock_response = mock.MagicMock()
         mock_response.status_code = 200
@@ -536,7 +538,7 @@ class TestTrackorGetFile(object):
         assert "Bad parameters" in t.errors[0]
 
     @mock.patch("onevizion.trackor.requests.get", side_effect=Exception("Connection timed out"))
-    @mock.patch("builtins.open", create=True)
+    @mock.patch(BUILTIN_OPEN, create=True)
     def test_get_file_request_exception(self, mock_open, mock_get):
         mock_file = mock.MagicMock()
         mock_open.return_value.__enter__ = mock.MagicMock(return_value=mock_file)
@@ -547,7 +549,7 @@ class TestTrackorGetFile(object):
             t.GetFile(trackorId=10, fieldName="F_FILE")
 
     @mock.patch("onevizion.trackor.requests.get")
-    @mock.patch("builtins.open", create=True)
+    @mock.patch(BUILTIN_OPEN, create=True)
     def test_get_file_non_200_response(self, mock_open, mock_get):
         mock_response = mock.MagicMock()
         mock_response.status_code = 403
@@ -566,7 +568,7 @@ class TestTrackorGetFile(object):
         assert "403" in t.errors[0]
 
     @mock.patch("onevizion.trackor.requests.get")
-    @mock.patch("builtins.open", create=True)
+    @mock.patch(BUILTIN_OPEN, create=True)
     def test_get_file_with_content_disposition_returns_new_name(self, mock_open, mock_get):
         mock_response = mock.MagicMock()
         mock_response.status_code = 200
