@@ -234,7 +234,8 @@ class TestEMailSendmail(object):
         mock_smtp_cls.return_value = mock_smtp
         # Create a temp text file
         txt_file = tmp_path / "report.txt"
-        txt_file.write_text("col1,col2\nval1,val2\n")
+        with open(str(txt_file), 'w') as f:
+            f.write("col1,col2\nval1,val2\n")
         email = self._make_email()
         email.files = [str(txt_file)]
         email.sendmail()

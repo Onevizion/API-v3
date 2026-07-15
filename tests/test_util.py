@@ -121,7 +121,8 @@ class TestGetParameters(object):
     def test_get_parameters_loads_json_file(self, tmp_path):
         param_data = {"mytoken": {"url": "test.com", "UserName": "u", "Password": "p"}}
         param_file = tmp_path / "params.json"
-        param_file.write_text(json.dumps(param_data))
+        with open(str(param_file), 'w') as f:
+            f.write(json.dumps(param_data))
         result = GetParameters(str(param_file))
         assert result == param_data
         assert onevizion.Config["ParameterData"] == param_data
@@ -134,14 +135,16 @@ class TestGetParameters(object):
     def test_get_passwords_is_alias_for_get_parameters(self, tmp_path):
         param_data = {"smtp": {"UserName": "u", "Password": "p", "Server": "s"}}
         param_file = tmp_path / "pass.json"
-        param_file.write_text(json.dumps(param_data))
+        with open(str(param_file), 'w') as f:
+            f.write(json.dumps(param_data))
         result = GetPasswords(str(param_file))
         assert result == param_data
 
     def test_get_parameters_uses_config_file_when_none_given(self, tmp_path):
         param_data = {"token": {"url": "example.com", "UserName": "u", "Password": "p"}}
         param_file = tmp_path / "params.json"
-        param_file.write_text(json.dumps(param_data))
+        with open(str(param_file), 'w') as f:
+            f.write(json.dumps(param_data))
         onevizion.Config["ParameterFile"] = str(param_file)
         result = GetParameters()
         assert result == param_data
