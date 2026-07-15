@@ -90,5 +90,6 @@ class Singleton(object):
 				if os.path.isfile(self.LockFileName):
 					os.unlink(self.LockFileName)
 		except Exception as e:
-			Message("Unknown error: %s" % e)
+			if hasattr(self, 'Msg') and self.Msg:
+				Message("Unknown error: %s" % e)
 			sys.exit(-1)
