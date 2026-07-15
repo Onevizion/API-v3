@@ -72,7 +72,7 @@ class TestImportInit(object):
         imp = Import()
         assert imp.URL == ""
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_init_runs_when_all_params_present(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             json_data={"process_id": 7, "status": "QUEUED"}
@@ -146,7 +146,7 @@ class TestImportInit(object):
 class TestImportRun(object):
     """Test Import.run() - all branches."""
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_run_success_with_process_id(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             json_data={"process_id": 5, "status": "QUEUED"}
@@ -166,7 +166,7 @@ class TestImportRun(object):
         finally:
             os.unlink(tmp)
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_run_with_comments(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             json_data={"process_id": 6, "status": "QUEUED"}
@@ -186,7 +186,7 @@ class TestImportRun(object):
         finally:
             os.unlink(tmp)
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_run_with_incremental(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             json_data={"process_id": 6, "status": "QUEUED"}
@@ -206,7 +206,7 @@ class TestImportRun(object):
         finally:
             os.unlink(tmp)
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_run_with_http_error(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=500, errors=["500 = Internal Server Error"]
@@ -224,7 +224,7 @@ class TestImportRun(object):
         finally:
             os.unlink(tmp)
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_run_with_http_error_no_request_object(self, mock_curl_cls):
         bad_curl = mock.MagicMock()
         bad_curl.errors = ["Connection reset"]
@@ -245,7 +245,7 @@ class TestImportRun(object):
         finally:
             os.unlink(tmp)
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_run_with_error_message_in_json(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             json_data={"error_message": "Import spec not found", "warnings": []}
@@ -263,7 +263,7 @@ class TestImportRun(object):
         finally:
             os.unlink(tmp)
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_run_with_warnings_in_json(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             json_data={
@@ -286,7 +286,7 @@ class TestImportRun(object):
         finally:
             os.unlink(tmp)
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_run_uses_basic_auth_by_default(self, mock_curl_cls):
         import requests as req
         mock_curl_cls.return_value = make_mock_curl(json_data={"process_id": 1, "status": "QUEUED"})
@@ -303,7 +303,7 @@ class TestImportRun(object):
         finally:
             os.unlink(tmp)
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_run_uses_token_auth_when_flag_set(self, mock_curl_cls):
         from onevizion.httpbearer import HTTPBearerAuth
         mock_curl_cls.return_value = make_mock_curl(json_data={"process_id": 1, "status": "QUEUED"})
@@ -321,7 +321,7 @@ class TestImportRun(object):
         finally:
             os.unlink(tmp)
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_run_url_contains_action(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"process_id": 1, "status": "QUEUED"})
         tmp = _make_temp_csv()
@@ -343,7 +343,7 @@ class TestImportRun(object):
 class TestImportInterrupt(object):
     """Test Import.interrupt() method."""
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_interrupt_uses_stored_process_id(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"status": "INTERRUPTED"})
         imp = Import(
@@ -356,7 +356,7 @@ class TestImportInterrupt(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "/imports/runs/88/interrupt" in call_url
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_interrupt_with_explicit_process_id(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"status": "INTERRUPTED"})
         imp = Import(
@@ -369,7 +369,7 @@ class TestImportInterrupt(object):
         assert "/imports/runs/99/interrupt" in call_url
         assert imp.processId == 99
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_interrupt_updates_status(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"status": "INTERRUPTED"})
         imp = Import(URL="https://test.onevizion.com", userName="u", password="p")
@@ -377,7 +377,7 @@ class TestImportInterrupt(object):
         imp.interrupt()
         assert imp.status == "INTERRUPTED"
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_interrupt_with_errors(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=404, errors=["404 = Not Found"]
@@ -387,7 +387,7 @@ class TestImportInterrupt(object):
         imp.interrupt()
         assert len(imp.errors) > 0
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_interrupt_error_no_request_object(self, mock_curl_cls):
         bad_curl = mock.MagicMock()
         bad_curl.errors = ["Timeout"]
@@ -400,7 +400,7 @@ class TestImportInterrupt(object):
         imp.interrupt()
         assert len(imp.errors) > 0
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_interrupt_uses_token_auth(self, mock_curl_cls):
         from onevizion.httpbearer import HTTPBearerAuth
         mock_curl_cls.return_value = make_mock_curl(json_data={"status": "INTERRUPTED"})
@@ -409,7 +409,7 @@ class TestImportInterrupt(object):
         imp.interrupt()
         assert isinstance(imp.auth, HTTPBearerAuth)
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_interrupt_no_status_key_in_response(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"message": "ok"})
         imp = Import(URL="https://test.onevizion.com", userName="u", password="p")
@@ -423,7 +423,7 @@ class TestImportInterrupt(object):
 class TestImportGetProcessData(object):
     """Test Import.getProcessData() method."""
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_get_process_data_by_stored_process_id(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             json_data={"status": "COMPLETED", "records_inserted": 10}
@@ -435,7 +435,7 @@ class TestImportGetProcessData(object):
         assert "/imports/runs/7" in call_url
         assert result == {"status": "COMPLETED", "records_inserted": 10}
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_get_process_data_with_explicit_process_id(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"status": "RUNNING"})
         imp = Import(URL="https://test.onevizion.com", userName="u", password="p")
@@ -443,7 +443,7 @@ class TestImportGetProcessData(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "/imports/runs/42" in call_url
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_get_process_data_updates_status(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"status": "COMPLETED"})
         imp = Import(URL="https://test.onevizion.com", userName="u", password="p")
@@ -451,7 +451,7 @@ class TestImportGetProcessData(object):
         imp.getProcessData()
         assert imp.status == "COMPLETED"
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_get_process_data_no_status_returns_no_status(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"records": []})
         imp = Import(URL="https://test.onevizion.com", userName="u", password="p")
@@ -459,7 +459,7 @@ class TestImportGetProcessData(object):
         imp.getProcessData()
         assert imp.status == "No Status"
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_get_process_data_with_filters(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data=[{"status": "QUEUED"}])
         imp = Import(URL="https://test.onevizion.com", userName="u", password="p")
@@ -470,7 +470,7 @@ class TestImportGetProcessData(object):
         assert "import_name=" in call_url
         assert "owner=" in call_url
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_get_process_data_with_status_list(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data=[])
         imp = Import(URL="https://test.onevizion.com", userName="u", password="p")
@@ -479,7 +479,7 @@ class TestImportGetProcessData(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "QUEUED,RUNNING" in call_url
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_get_process_data_with_errors(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=500, errors=["500 = Server Error"]
@@ -489,7 +489,7 @@ class TestImportGetProcessData(object):
         imp.getProcessData()
         assert len(imp.errors) > 0
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_get_process_data_error_no_request_object(self, mock_curl_cls):
         bad_curl = mock.MagicMock()
         bad_curl.errors = ["Network failure"]
@@ -502,7 +502,7 @@ class TestImportGetProcessData(object):
         imp.getProcessData()
         assert len(imp.errors) > 0
 
-    @mock.patch("onevizion.Import.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_get_process_data_uses_token_auth(self, mock_curl_cls):
         from onevizion.httpbearer import HTTPBearerAuth
         mock_curl_cls.return_value = make_mock_curl(json_data={"status": "DONE"})

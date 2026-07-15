@@ -256,7 +256,7 @@ class TestModuleLog(object):
         with pytest.raises(Exception):
             ModuleLog(processId=1, URL="https://test.onevizion.com", logLevelName="INVALID")
 
-    @mock.patch("onevizion.module.log.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_add_posts_log_when_level_at_or_below_threshold(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"log_id": 1})
         log = ModuleLog(processId=5, URL="https://test.onevizion.com", userName="u", password="p", logLevelName="Debug")
@@ -265,7 +265,7 @@ class TestModuleLog(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "/modules/runs/5/logs" in call_url
 
-    @mock.patch("onevizion.module.log.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_add_suppressed_when_level_above_threshold(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"log_id": 1})
         # logLevelName=Error means only ERROR (id=0) and below pass
@@ -275,21 +275,21 @@ class TestModuleLog(object):
         assert not mock_curl_cls.called
         assert result is None
 
-    @mock.patch("onevizion.module.log.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_add_raises_on_curl_error(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(status_code=500, errors=["500 = Server Error"])
         log = ModuleLog(processId=5, URL="https://test.onevizion.com", userName="u", password="p", logLevelName="Debug")
         with pytest.raises(Exception):
             log.add(LogLevel.ERROR, "Test error")
 
-    @mock.patch("onevizion.module.log.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_add_info_level_when_threshold_is_info(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"log_id": 2})
         log = ModuleLog(processId=5, URL="https://test.onevizion.com", userName="u", password="p", logLevelName="Info")
         log.add(LogLevel.INFO, "Info message")
         assert mock_curl_cls.called
 
-    @mock.patch("onevizion.module.log.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_add_warning_suppressed_when_threshold_is_error(self, mock_curl_cls):
         log = ModuleLog(processId=5, URL="https://test.onevizion.com", userName="u", password="p", logLevelName="Error")
         result = log.add(LogLevel.WARNING, "Warning message")
@@ -312,7 +312,7 @@ class TestIntegrationLog(object):
             categories = [str(x.category) for x in w]
             assert any("DeprecationWarning" in c for c in categories)
 
-    @mock.patch("onevizion.module.log.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_add_delegates_to_module_log(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"log_id": 1})
         with warnings.catch_warnings(record=True):
@@ -364,7 +364,7 @@ if sys.version_info[0] >= 3:
             q = NotifQueue(serviceId=1, paramToken="nq_tok")
             assert "nq.onevizion.com" in q._URL
 
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_get_notif_queue_success(self, mock_curl_cls):
             mock_curl_cls.return_value = make_mock_curl(json_data=[{"id": 1}, {"id": 2}])
             q = NotifQueue(serviceId=10, URL="https://test.onevizion.com", userName="u", password="p")
@@ -373,14 +373,14 @@ if sys.version_info[0] >= 3:
             assert "service_id=10" in call_url
             assert result == [{"id": 1}, {"id": 2}]
 
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_get_notif_queue_raises_on_error(self, mock_curl_cls):
             mock_curl_cls.return_value = make_mock_curl(status_code=500, errors=["500 = Error"])
             q = NotifQueue(serviceId=10, URL="https://test.onevizion.com", userName="u", password="p")
             with pytest.raises(Exception):
                 q.getNotifQueue()
 
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_update_notif_queue_rec_status_by_id_success(self, mock_curl_cls):
             mock_curl_cls.return_value = make_mock_curl(json_data={})
             q = NotifQueue(serviceId=10, URL="https://test.onevizion.com", userName="u", password="p")
@@ -389,14 +389,14 @@ if sys.version_info[0] >= 3:
             assert "/notif/queue/5/update_status" in call_url
             assert "status=SUCCESS" in call_url
 
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_update_notif_queue_rec_status_by_id_raises_on_error(self, mock_curl_cls):
             mock_curl_cls.return_value = make_mock_curl(status_code=404, errors=["404 = Not Found"])
             q = NotifQueue(serviceId=10, URL="https://test.onevizion.com", userName="u", password="p")
             with pytest.raises(Exception):
                 q.updateNotifQueueRecStatusById(notifQueueRecId=99, status="SUCCESS")
 
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_add_new_attempt_success(self, mock_curl_cls):
             mock_curl_cls.return_value = make_mock_curl(json_data={})
             q = NotifQueue(serviceId=10, URL="https://test.onevizion.com", userName="u", password="p")
@@ -404,14 +404,14 @@ if sys.version_info[0] >= 3:
             call_url = mock_curl_cls.call_args[0][1]
             assert "/notif/queue/5/attempts" in call_url
 
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_add_new_attempt_raises_on_error(self, mock_curl_cls):
             mock_curl_cls.return_value = make_mock_curl(status_code=500, errors=["500 = Error"])
             q = NotifQueue(serviceId=10, URL="https://test.onevizion.com", userName="u", password="p")
             with pytest.raises(Exception):
                 q.addNewAttempt(notifQueueRecId=5, errorMessage="error")
 
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_update_notif_queue_rec_status_delegates(self, mock_curl_cls):
             mock_curl_cls.return_value = make_mock_curl(json_data={})
             q = NotifQueue(serviceId=10, URL="https://test.onevizion.com", userName="u", password="p")
@@ -510,8 +510,8 @@ if sys.version_info[0] >= 3:
                 "blobDataIds": [],
             }
 
-        @mock.patch("onevizion.module.log.curl")
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_start_sends_all_queued_records(self, mock_queue_curl, mock_log_curl):
             mock_queue_curl.return_value = make_mock_curl(
                 json_data=[self._make_queue_record_json(1), self._make_queue_record_json(2)]
@@ -532,8 +532,8 @@ if sys.version_info[0] >= 3:
             svc.start()
             assert len(svc.sent) == 2
 
-        @mock.patch("onevizion.module.log.curl")
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_start_handles_send_failure(self, mock_queue_curl, mock_log_curl):
             mock_queue_curl.return_value = make_mock_curl(
                 json_data=[self._make_queue_record_json(1)]
@@ -556,8 +556,8 @@ if sys.version_info[0] >= 3:
             # No records sent since sendNotification raises
             assert len(svc.sent) == 0
 
-        @mock.patch("onevizion.module.log.curl")
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_start_with_empty_queue(self, mock_queue_curl, mock_log_curl):
             mock_queue_curl.return_value = make_mock_curl(json_data=[])
             mock_log_curl.return_value = make_mock_curl(json_data={"log_id": 1})
@@ -576,8 +576,8 @@ if sys.version_info[0] >= 3:
             svc.start()
             assert len(svc.sent) == 0
 
-        @mock.patch("onevizion.module.log.curl")
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_start_retries_on_failure(self, mock_queue_curl, mock_log_curl):
             """With maxAttempts=2 and time.sleep mocked, ensure loop runs twice."""
             mock_queue_curl.return_value = make_mock_curl(
@@ -618,8 +618,8 @@ if sys.version_info[0] >= 3:
             result = NotificationService._convertNotifQueueJsonToList([])
             assert result == []
 
-        @mock.patch("onevizion.module.log.curl")
-        @mock.patch("onevizion.notif.queue.curl")
+        @mock.patch("onevizion.curl.curl")
+        @mock.patch("onevizion.curl.curl")
         def test_get_integration_log_emits_warning(self, mock_queue_curl, mock_log_curl):
             """Accessing _integrationLog attribute emits DeprecationWarning."""
             mock_queue_curl.return_value = make_mock_curl(json_data=[])

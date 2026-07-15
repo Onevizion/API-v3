@@ -90,7 +90,7 @@ class TestTaskInit(object):
 class TestTaskRead(object):
     """Test Task.read() - all URL building branches."""
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_read_by_task_id(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"task_id": 10})
         t = Task(URL="https://test.onevizion.com", userName="u", password="p")
@@ -99,7 +99,7 @@ class TestTaskRead(object):
         assert "/tasks/10" in call_url
         assert t.jsonData == {"task_id": 10}
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_read_by_workplan_id(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data=[{"task_id": 1}, {"task_id": 2}])
         t = Task(URL="https://test.onevizion.com", userName="u", password="p")
@@ -107,7 +107,7 @@ class TestTaskRead(object):
         call_url = mock_curl_cls.call_args[0][1]
         assert "/wps/5/tasks" in call_url
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_read_by_workplan_and_order_number(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"task_id": 3})
         t = Task(URL="https://test.onevizion.com", userName="u", password="p")
@@ -116,7 +116,7 @@ class TestTaskRead(object):
         assert "workplan_id=5" in call_url
         assert "order_number=2" in call_url
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_read_resets_errors(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={})
         t = Task(URL="https://test.onevizion.com", userName="u", password="p")
@@ -124,7 +124,7 @@ class TestTaskRead(object):
         t.read(taskId=1)
         assert t.errors == []
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_read_with_http_error(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=404, errors=["404 = Not Found"]
@@ -133,7 +133,7 @@ class TestTaskRead(object):
         t.read(taskId=999)
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_read_error_no_request_object(self, mock_curl_cls):
         bad_curl = mock.MagicMock()
         bad_curl.errors = ["Connection refused"]
@@ -149,7 +149,7 @@ class TestTaskRead(object):
 class TestTaskUpdate(object):
     """Test Task.update(), updatePartial(), and _update() methods."""
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_update_puts_to_task_url(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"task_id": 10})
         t = Task(URL="https://test.onevizion.com", userName="u", password="p")
@@ -158,7 +158,7 @@ class TestTaskUpdate(object):
         assert call_args[0] == "PUT"
         assert "/tasks/10" in call_args[1]
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_update_partial_patches_to_task_url(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"task_id": 10})
         t = Task(URL="https://test.onevizion.com", userName="u", password="p")
@@ -167,7 +167,7 @@ class TestTaskUpdate(object):
         assert call_args[0] == "PATCH"
         assert "/tasks/10" in call_args[1]
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_update_with_dynamic_dates(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"task_id": 10})
         t = Task(URL="https://test.onevizion.com", userName="u", password="p")
@@ -179,7 +179,7 @@ class TestTaskUpdate(object):
         payload = json.loads(call_kwargs["data"])
         assert "dynamic_dates" in payload
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_update_with_errors(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(
             status_code=400, errors=["400 = Bad Request"]
@@ -188,7 +188,7 @@ class TestTaskUpdate(object):
         t.update(taskId=10, fields={"bad_field": "value"}, dynamicDates=[])
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_update_error_no_request_object(self, mock_curl_cls):
         bad_curl = mock.MagicMock()
         bad_curl.errors = ["Timeout"]
@@ -200,7 +200,7 @@ class TestTaskUpdate(object):
         t.update(taskId=10, fields={"task_name": "Test"}, dynamicDates=[])
         assert len(t.errors) > 0
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_update_resets_errors_and_json(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"task_id": 1})
         t = Task(URL="https://test.onevizion.com", userName="u", password="p")
@@ -210,7 +210,7 @@ class TestTaskUpdate(object):
         assert t.errors == []
         assert t.jsonData == {"task_id": 1}
 
-    @mock.patch("onevizion.task.curl")
+    @mock.patch("onevizion.curl.curl")
     def test_update_sends_json_content_type(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={})
         t = Task(URL="https://test.onevizion.com", userName="u", password="p")
