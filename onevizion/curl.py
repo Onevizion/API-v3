@@ -54,7 +54,66 @@ class curl(object):
 		if value is not None:
 			self.args[key] = value
 
+	def _validate_inputs(self):
+		"""Validate inputs for security and correctness.
+
+		Returns True if validation passes, False otherwise.
+		Errors are appended to self.errors.
+		"""
+		# Validate URL
+		if not self.url:
+			self.errors.append("URL is required and cannot be empty")
+			return False
+
+		# Validate URL protocol (security: prevent javascript:, file:, data: etc.)
+		url_lower = str(self.url).lower()
+		if not (url_lower.startswith('http://') or url_lower.startswith('https://')):
+			self.errors.append("URL protocol must be http:// or https://. Got: {url}".format(url=self.url))
+			return False
+
+		# Validate HTTP method
+		valid_methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
+		if self.method.upper() not in valid_methods:
+			self.errors.append("Invalid HTTP method: {method}. Must be one of: {valid}".format(
+				method=self.method,
+				valid=', '.join(valid_methods)
+			))
+			return False
+
+		# Validate timeout (must be positive)
+		if self.timeout is not None:
+			try:
+				timeout_val = float(self.timeout)
+				if timeout_val <= 0:
+					self.errors.append("Timeout must be positive. Got: {timeout}".format(timeout=self.timeout))
+					return False
+			except (TypeError, ValueError):
+				self.errors.append("Timeout must be a number. Got: {timeout}".format(timeout=self.timeout))
+				return False
+
+		# Validate max_retries (must be non-negative)
+		if self.max_retries is not None:
+			try:
+				retries_val = int(self.max_retries)
+				if retries_val < 0:
+					self.errors.append("Max retries must be non-negative. Got: {retries}".format(retries=self.max_retries))
+					return False
+			except (TypeError, ValueError):
+				self.errors.append("Max retries must be an integer. Got: {retries}".format(retries=self.max_retries))
+				return False
+
+		return True
+
 	def runQuery(self):
+		# Clear previous errors and jsonData
+		self.errors = []
+		self.jsonData = {}
+
+		# Validate inputs before making request
+		if not self._validate_inputs():
+			# Validation failed, errors already set
+			return
+
 		self.setArg('params', self.params)
 		self.setArg('data', self.data)
 		self.setArg('headers', self.headers)
@@ -70,8 +129,6 @@ class curl(object):
 		self.setArg('cert', self.cert)
 		self.setArg('json', self.json)
 
-		self.errors = []
-		self.jsonData = {}
 		self.sentUrl = self.url
 		self.sentArgs = self.args
 		before = datetime.utcnow()
@@ -104,6 +161,9 @@ class curl(object):
 					# 5xx = server error (transient) - retry
 					if attempt < self.max_retries:
 						import time
+						# Close failed response before retrying
+						if self.request:
+							self.request.close()
 						delay = self.retry_backoff * (2 ** attempt)  # Exponential backoff
 						time.sleep(delay)
 						attempt += 1
@@ -137,4 +197,8 @@ class curl(object):
 		after = datetime.utcnow()
 		delta = after - before
 		self.duration = delta.total_seconds()
+
+		# Close the final response to free connection resources
+		if self.request:
+			self.request.close()
 

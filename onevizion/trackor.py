@@ -43,12 +43,41 @@ class Trackor(object):
 			if 'isTokenAuth' in onevizion.Config["ParameterData"][paramToken]:
 				isTokenAuth = onevizion.Config["ParameterData"][paramToken]['isTokenAuth']
 
+		# Validate URL protocol before transformation (security check)
+		if self.URL:
+			url_lower = str(self.URL).lower()
+			# If URL already has a protocol, ensure it's http or https
+			# Check for : before any / (which would indicate a protocol)
+			colon_pos = url_lower.find(':')
+			slash_pos = url_lower.find('/')
+			if colon_pos != -1 and (slash_pos == -1 or colon_pos < slash_pos):
+				# URL has a protocol - ensure it's http or https
+				if not (url_lower.startswith('http://') or url_lower.startswith('https://')):
+					self.errors.append("URL protocol must be http:// or https://. Got: {url}".format(url=self.URL))
+
 		self.URL = getUrlContainingScheme(self.URL)
 
 		if isTokenAuth:
 			self.auth = HTTPBearerAuth(self.userName, self.password)
 		else:
 			self.auth = requests.auth.HTTPBasicAuth(self.userName, self.password)
+
+		# Validate other inputs
+		self._validate_inputs()
+
+	def _validate_inputs(self):
+		"""Validate inputs for security and correctness.
+
+		Errors are appended to self.errors.
+		"""
+		# Validate max_file_size (must be positive or None)
+		if self.max_file_size is not None:
+			try:
+				size_val = int(self.max_file_size)
+				if size_val <= 0:
+					self.errors.append("Max file size must be positive. Got: {size}".format(size=self.max_file_size))
+			except (TypeError, ValueError):
+				self.errors.append("Max file size must be an integer. Got: {size}".format(size=self.max_file_size))
 
 	def delete(self,trackorId):
 		""" Delete a Trackor instance.  Must pass a trackorId, the unique DB number.
@@ -458,6 +487,9 @@ class Trackor(object):
 							max=self.max_file_size
 						)
 					)
+					# Close response before returning
+					if self.request:
+						self.request.close()
 					return None
 
 			# Use atomic write: write to .tmp first, rename on success
@@ -477,6 +509,12 @@ class Trackor(object):
 
 		except Exception as e:
 			self.errors.append(str(e))
+			# Close response if it was created
+			if self.request:
+				try:
+					self.request.close()
+				except:
+					pass
 			# Clean up atomic temp file on error
 			try:
 				if 'atomicTmpFileName' in locals() and os.path.exists(atomicTmpFileName):
@@ -513,6 +551,9 @@ class Trackor(object):
 				pass
 				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.errors,indent=2)),0,TraceTag+"-Errors")
 			onevizion.Config["Error"]=True
+			# Close response before returning on error
+			if self.request:
+				self.request.close()
 			return None  # Return None on error
 
 		# return the name of the fiel that was downloaded.
@@ -520,7 +561,12 @@ class Trackor(object):
 			newFileName = get_filename_from_cd(self.request.headers.get('content-disposition'))
 			if newFileName is not None and len(newFileName) > 0:
 				os.rename(tmpFileName,newFileName)
+				# Close response before returning
+				self.request.close()
 				return newFileName
+		# Close response before returning
+		if self.request:
+			self.request.close()
 		return tmpFileName
 
 
