@@ -671,8 +671,9 @@ class TestTrackorUploadFile(object):
 
         initial_fds = len(os.listdir('/proc/self/fd'))
 
-        # Create and upload 50 files
-        with tempfile.TemporaryDirectory() as tmpdir:
+        # Create and upload 50 files (Python 2.7 compatible)
+        tmpdir = tempfile.mkdtemp()
+        try:
             test_files = []
             for i in range(50):
                 test_file = os.path.join(tmpdir, "test{}.txt".format(i))
@@ -684,13 +685,17 @@ class TestTrackorUploadFile(object):
             for test_file in test_files:
                 t.UploadFile(trackorId=123, fieldName="F_FILE", fileName=test_file)
 
-        # Check file descriptors didn't leak
-        final_fds = len(os.listdir('/proc/self/fd'))
-        leaked_fds = final_fds - initial_fds
+            # Check file descriptors didn't leak
+            final_fds = len(os.listdir('/proc/self/fd'))
+            leaked_fds = final_fds - initial_fds
 
-        assert leaked_fds < 10, \
-            "BUG: File descriptor leak! {} files uploaded, {} FDs leaked. " \
-            "UploadFile opens files but never closes them!".format(len(test_files), leaked_fds)
+            assert leaked_fds < 10, \
+                "BUG: File descriptor leak! {} files uploaded, {} FDs leaked. " \
+                "UploadFile opens files but never closes them!".format(len(test_files), leaked_fds)
+        finally:
+            # Cleanup temp directory (Python 2.7 compatible)
+            import shutil
+            shutil.rmtree(tmpdir)
 
     @mock.patch("onevizion.trackor.curl")
     def test_upload_file_with_new_name(self, mock_curl_cls):
