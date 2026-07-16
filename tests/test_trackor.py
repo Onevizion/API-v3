@@ -545,8 +545,11 @@ class TestTrackorGetFile(object):
         mock_open.return_value.__exit__ = mock.MagicMock(return_value=False)
 
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
-        with pytest.raises(Exception):
-            t.GetFile(trackorId=10, fieldName="F_FILE")
+        result = t.GetFile(trackorId=10, fieldName="F_FILE")
+        # Should return None on exception and populate errors
+        assert result is None
+        assert len(t.errors) > 0
+        assert "Connection timed out" in t.errors[0]
 
     @mock.patch("onevizion.trackor.requests.get")
     @mock.patch(BUILTIN_OPEN, create=True)

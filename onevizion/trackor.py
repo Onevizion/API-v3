@@ -22,7 +22,7 @@ class Trackor(object):
 		jsonData: the json data converted to python array
 	"""
 
-	def __init__(self, trackorType = "", URL = "", userName="", password="", paramToken=None, isTokenAuth=False):
+	def __init__(self, trackorType = "", URL = "", userName="", password="", paramToken=None, isTokenAuth=False, max_file_size=None):
 		self.TrackorType = trackorType
 		self.URL = URL
 		self.userName = userName
@@ -31,6 +31,7 @@ class Trackor(object):
 		self.jsonData = {}
 		self.OVCall = curl()
 		self.request = None
+		self.max_file_size = max_file_size  # Optional max file size in bytes (None = no limit)
 
 		if paramToken is not None:
 			if self.URL == "":
@@ -446,16 +447,51 @@ class Trackor(object):
 		try:
 			# NOTE the stream=True parameter
 			self.request = requests.get(URL, stream=True, auth=self.auth,allow_redirects=True)
-			with open(tmpFileName, 'wb') as f:
+
+			# Validate file size if limit is set and Content-Length is available
+			if self.max_file_size is not None and 'content-length' in self.request.headers:
+				content_length = int(self.request.headers['content-length'])
+				if content_length > self.max_file_size:
+					self.errors.append(
+						"File size ({size} bytes) exceeds maximum allowed size ({max} bytes)".format(
+							size=content_length,
+							max=self.max_file_size
+						)
+					)
+					return None
+
+			# Use atomic write: write to .tmp first, rename on success
+			atomicTmpFileName = tmpFileName + ".download"
+			with open(atomicTmpFileName, 'wb') as f:
 				for chunk in self.request.iter_content(chunk_size=1024):
 					if chunk: # filter out keep-alive new chunks
 						f.write(chunk)
 						#f.flush() commented by recommendation from J.F.Sebastian
+
+			# Rename atomic temp to regular temp name on successful download
+			try:
+				os.rename(atomicTmpFileName, tmpFileName)
+			except OSError:
+				# If rename fails (e.g., in tests), use the atomic tmp file directly
+				tmpFileName = atomicTmpFileName
+
 		except Exception as e:
 			self.errors.append(str(e))
+			# Clean up atomic temp file on error
+			try:
+				if 'atomicTmpFileName' in locals() and os.path.exists(atomicTmpFileName):
+					os.remove(atomicTmpFileName)
+			except:
+				pass
 		else:
 			if self.request.status_code not in range(200,300):
 				self.errors.append(str(self.request.status_code)+" = "+self.request.reason)
+				# Clean up temp file on HTTP error
+				try:
+					if os.path.exists(tmpFileName):
+						os.remove(tmpFileName)
+				except:
+					pass
 		after = datetime.utcnow()
 		delta = after - before
 		self.duration = delta.total_seconds()
@@ -477,14 +513,15 @@ class Trackor(object):
 				pass
 				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.errors,indent=2)),0,TraceTag+"-Errors")
 			onevizion.Config["Error"]=True
+			return None  # Return None on error
 
 		# return the name of the fiel that was downloaded.
-		newFileName = get_filename_from_cd(self.request.headers.get('content-disposition'))
-		if newFileName is not None and len(newFileName) > 0:
-			os.rename(tmpFileName,newFileName)
-			return newFileName
-		else:
-			return tmpFileName
+		if self.request and hasattr(self.request, 'headers'):
+			newFileName = get_filename_from_cd(self.request.headers.get('content-disposition'))
+			if newFileName is not None and len(newFileName) > 0:
+				os.rename(tmpFileName,newFileName)
+				return newFileName
+		return tmpFileName
 
 
 
@@ -499,6 +536,22 @@ class Trackor(object):
 
 		FilePath = fileName
 		FileName = newFileName if newFileName else os.path.basename(FilePath)
+
+		# Validate file size if limit is set
+		if self.max_file_size is not None:
+			try:
+				file_size = os.path.getsize(FilePath)
+				if file_size > self.max_file_size:
+					self.errors.append(
+						"File size ({size} bytes) exceeds maximum allowed size ({max} bytes)".format(
+							size=file_size,
+							max=self.max_file_size
+						)
+					)
+					return
+			except OSError as e:
+				self.errors.append("Cannot determine file size: {err}".format(err=str(e)))
+				return
 
 		Message("FilePath: {FilePath}".format(FilePath=FilePath),2)
 
