@@ -499,11 +499,11 @@ class Trackor(object):
 
 		FilePath = fileName
 		FileName = newFileName if newFileName else os.path.basename(FilePath)
-		BinaryStream = open(FilePath, 'rb')
 
 		Message("FilePath: {FilePath}".format(FilePath=FilePath),2)
 
-		self.UploadFileByFileContents(trackorId=trackorId, fieldName=fieldName, fileName=FileName, fileContents=BinaryStream)
+		with open(FilePath, 'rb') as BinaryStream:
+			self.UploadFileByFileContents(trackorId=trackorId, fieldName=fieldName, fileName=FileName, fileContents=BinaryStream)
 
 
 	def UploadFileByFileContents(self, trackorId, fieldName, fileName, fileContents):

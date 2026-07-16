@@ -14,7 +14,7 @@ class curl(object):
 		**kwargs:  any other arguments to send to the request
 	"""
 
-	def __init__(self, method='GET', url=None, **kwargs):
+	def __init__(self, method='GET', url=None, timeout=300.0, **kwargs):
 		self.method = method
 		self.url = url
 		self.params = None
@@ -23,7 +23,7 @@ class curl(object):
 		self.cookies = None
 		self.files = None
 		self.auth = None
-		self.timeout = None
+		self.timeout = timeout  # Default 300s (5min) to prevent infinite hangs
 		self.allow_redirects = True
 		self.proxies = None
 		self.hooks = None
