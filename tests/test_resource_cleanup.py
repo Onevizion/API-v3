@@ -8,9 +8,11 @@ Tests demonstrate:
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import os
+import sys
 import tempfile
 import shutil
 import responses
+import pytest
 
 from onevizion.curl import curl
 from onevizion.trackor import Trackor
@@ -53,6 +55,7 @@ class TestCurlResourceCleanup(object):
         # Verify error was recorded
         assert len(c.errors) > 0
 
+    @pytest.mark.skipif(sys.version_info < (3, 0), reason="Old responses library doesn't handle multiple responses for same URL")
     @responses.activate
     def test_curl_closes_all_retry_responses(self):
         """curl should close responses from all retry attempts."""
