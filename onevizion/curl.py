@@ -155,7 +155,8 @@ class curl(object):
 					break
 				elif self.request.status_code in range(400, 500):
 					# 4xx = client error (permanent) - don't retry
-					self.errors.append(str(self.request.status_code)+" = "+self.request.reason+"\n"+str(self.request.text))
+					reason = self.request.reason if self.request.reason else "Unknown"
+					self.errors.append(str(self.request.status_code)+" = "+reason+"\n"+str(self.request.text))
 					break
 				elif self.request.status_code >= 500:
 					# 5xx = server error (transient) - retry
@@ -170,7 +171,8 @@ class curl(object):
 						continue
 					else:
 						# Max retries reached
-						self.errors.append(str(self.request.status_code)+" = "+self.request.reason+"\n"+str(self.request.text))
+						reason = self.request.reason if self.request.reason else "Unknown"
+						self.errors.append(str(self.request.status_code)+" = "+reason+"\n"+str(self.request.text))
 						break
 
 			except (requests.ConnectionError, requests.Timeout) as e:

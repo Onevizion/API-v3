@@ -301,6 +301,7 @@ class TestCurlTimeout(object):
             call_kwargs = mock_request.call_args[1]
             assert call_kwargs['timeout'] == 120.0, "Custom timeout not passed through"
 
+    @pytest.mark.skipif(sys.version_info < (3, 0), reason="Old responses library doesn't handle callback exceptions properly")
     @responses.activate
     def test_curl_handles_timeout_exception(self):
         """curl should catch timeout exceptions and add to errors."""
@@ -321,6 +322,7 @@ class TestCurlTimeout(object):
         error_text = str(c.errors[0]).lower()
         assert 'timeout' in error_text or 'timed out' in error_text
 
+    @pytest.mark.skipif(sys.version_info < (3, 0), reason="Old responses library doesn't handle callback exceptions properly")
     @responses.activate
     def test_curl_actually_times_out(self):
         """Demonstrate that curl will hang forever without timeout."""
