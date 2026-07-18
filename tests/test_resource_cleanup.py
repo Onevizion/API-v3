@@ -31,7 +31,7 @@ class TestCurlResourceCleanup(object):
         mock_response.status_code = 200
         mock_response.text = '{"status": "ok"}'
 
-        with mock.patch('onevizion.curl.requests.request', return_value=mock_response):
+        with mock.patch('requests.request', return_value=mock_response):
             c = curl('GET', 'http://api.com/data')
 
             # Response should be closed
@@ -44,7 +44,7 @@ class TestCurlResourceCleanup(object):
         mock_response.reason = "Not Found"
         mock_response.text = "Not found"
 
-        with mock.patch('onevizion.curl.requests.request', return_value=mock_response):
+        with mock.patch('requests.request', return_value=mock_response):
             c = curl('GET', 'http://api.com/missing')
 
             # Response should be closed even on error
@@ -58,7 +58,7 @@ class TestCurlResourceCleanup(object):
         mock_response.reason = "Server Error"
         mock_response.text = "Error"
 
-        with mock.patch('onevizion.curl.requests.request', return_value=mock_response):
+        with mock.patch('requests.request', return_value=mock_response):
             c = curl('GET', 'http://api.com/broken', max_retries=0)
 
             # Response should be closed
@@ -80,7 +80,7 @@ class TestCurlResourceCleanup(object):
                 response.text = '{"status": "ok"}'
             return response
 
-        with mock.patch('onevizion.curl.requests.request', side_effect=failing_then_success) as mock_req:
+        with mock.patch('requests.request', side_effect=failing_then_success) as mock_req:
             c = curl('GET', 'http://api.com/flaky', max_retries=2)
 
             # Should have made 2 calls
@@ -110,7 +110,7 @@ class TestTrackorResourceCleanup(object):
         try:
             os.chdir(tmpdir)
 
-            with mock.patch('onevizion.trackor.requests.get', return_value=mock_response):
+            with mock.patch('requests.get', return_value=mock_response):
                 t = Trackor(
                     trackorType="Project",
                     URL="https://test.onevizion.com",
@@ -132,7 +132,7 @@ class TestTrackorResourceCleanup(object):
         mock_response.reason = "Server Error"
         mock_response.headers = {}
 
-        with mock.patch('onevizion.trackor.requests.get', return_value=mock_response):
+        with mock.patch('requests.get', return_value=mock_response):
             t = Trackor(
                 trackorType="Project",
                 URL="https://test.onevizion.com",
@@ -154,7 +154,7 @@ class TestTrackorResourceCleanup(object):
             'content-disposition': 'filename=large.bin'
         }
 
-        with mock.patch('onevizion.trackor.requests.get', return_value=mock_response):
+        with mock.patch('requests.get', return_value=mock_response):
             t = Trackor(
                 trackorType="Project",
                 URL="https://test.onevizion.com",
@@ -182,7 +182,7 @@ class TestTrackorResourceCleanup(object):
             mock_response.text = '{"blob_data_id": 123}'
 
             # Mock requests.request so curl can run normally and close the response
-            with mock.patch('onevizion.curl.requests.request', return_value=mock_response):
+            with mock.patch('requests.request', return_value=mock_response):
                 t = Trackor(
                     trackorType="Project",
                     URL="https://test.onevizion.com",

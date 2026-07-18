@@ -49,7 +49,7 @@ class TestCurlInputValidation(object):
         mock_response.status_code = 200
         mock_response.text = '{}'
 
-        with mock.patch('onevizion.curl.requests.request', return_value=mock_response):
+        with mock.patch('requests.request', return_value=mock_response):
             c = curl('GET', 'http://example.com')
 
             assert len(c.errors) == 0
@@ -60,7 +60,7 @@ class TestCurlInputValidation(object):
         mock_response.status_code = 200
         mock_response.text = '{}'
 
-        with mock.patch('onevizion.curl.requests.request', return_value=mock_response):
+        with mock.patch('requests.request', return_value=mock_response):
             c = curl('GET', 'https://example.com')
 
             assert len(c.errors) == 0
@@ -87,7 +87,7 @@ class TestCurlInputValidation(object):
         mock_response.status_code = 200
         mock_response.text = '{}'
 
-        with mock.patch('onevizion.curl.requests.request', return_value=mock_response):
+        with mock.patch('requests.request', return_value=mock_response):
             c = curl('INVALID', 'http://example.com')
 
             # Should have validation error
@@ -102,7 +102,7 @@ class TestCurlInputValidation(object):
 
         valid_methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
-        with mock.patch('onevizion.curl.requests.request', return_value=mock_response):
+        with mock.patch('requests.request', return_value=mock_response):
             for method in valid_methods:
                 c = curl(method, 'http://example.com')
                 assert len(c.errors) == 0, "Method {m} should be accepted".format(m=method)
