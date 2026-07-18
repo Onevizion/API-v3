@@ -523,7 +523,8 @@ class Trackor(object):
 				pass
 		else:
 			if self.request.status_code not in range(200,300):
-				self.errors.append(str(self.request.status_code)+" = "+self.request.reason)
+				reason = self.request.reason if self.request.reason else "Unknown"
+				self.errors.append(str(self.request.status_code)+" = "+reason)
 				# Clean up temp file on HTTP error
 				try:
 					if os.path.exists(tmpFileName):
