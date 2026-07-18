@@ -7,13 +7,7 @@ Tests demonstrate:
 """
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import sys
-
-# Python 2/3 compatibility
-if sys.version_info[0] >= 3:
-    from unittest import mock
-else:
-    import mock
+import responses
 
 from onevizion.curl import curl
 from onevizion.trackor import Trackor
@@ -43,27 +37,23 @@ class TestCurlInputValidation(object):
         assert len(c.errors) > 0
         assert 'url' in c.errors[0].lower() or 'protocol' in c.errors[0].lower()
 
+    @responses.activate
     def test_url_validation_accepts_http(self):
         """curl should accept http:// URLs."""
-        mock_response = mock.MagicMock()
-        mock_response.status_code = 200
-        mock_response.text = '{}'
+        responses.add(responses.GET, 'http://example.com', json={}, status=200)
 
-        with mock.patch('requests.request', return_value=mock_response):
-            c = curl('GET', 'http://example.com')
+        c = curl('GET', 'http://example.com')
 
-            assert len(c.errors) == 0
+        assert len(c.errors) == 0
 
+    @responses.activate
     def test_url_validation_accepts_https(self):
         """curl should accept https:// URLs."""
-        mock_response = mock.MagicMock()
-        mock_response.status_code = 200
-        mock_response.text = '{}'
+        responses.add(responses.GET, 'https://example.com', json={}, status=200)
 
-        with mock.patch('requests.request', return_value=mock_response):
-            c = curl('GET', 'https://example.com')
+        c = curl('GET', 'https://example.com')
 
-            assert len(c.errors) == 0
+        assert len(c.errors) == 0
 
     def test_url_validation_rejects_none(self):
         """curl should reject None URL when runQuery is called."""
@@ -81,31 +71,33 @@ class TestCurlInputValidation(object):
         assert len(c.errors) > 0
         assert 'url' in c.errors[0].lower()
 
+    @responses.activate
     def test_method_validation_rejects_invalid(self):
         """curl should reject invalid HTTP methods."""
-        mock_response = mock.MagicMock()
-        mock_response.status_code = 200
-        mock_response.text = '{}'
+        # Note: responses will still intercept even for invalid methods,
+        # but our validation should catch it before making the request
+        c = curl('INVALID', 'http://example.com')
 
-        with mock.patch('requests.request', return_value=mock_response):
-            c = curl('INVALID', 'http://example.com')
+        # Should have validation error
+        assert len(c.errors) > 0
+        assert 'method' in c.errors[0].lower()
 
-            # Should have validation error
-            assert len(c.errors) > 0
-            assert 'method' in c.errors[0].lower()
-
+    @responses.activate
     def test_method_validation_accepts_valid_methods(self):
         """curl should accept standard HTTP methods."""
-        mock_response = mock.MagicMock()
-        mock_response.status_code = 200
-        mock_response.text = '{}'
-
         valid_methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
-        with mock.patch('requests.request', return_value=mock_response):
-            for method in valid_methods:
-                c = curl(method, 'http://example.com')
-                assert len(c.errors) == 0, "Method {m} should be accepted".format(m=method)
+        # Register response for each method
+        for method in valid_methods:
+            # HEAD responses must not have a body
+            if method == 'HEAD':
+                responses.add(method, 'http://example.com', status=200)
+            else:
+                responses.add(method, 'http://example.com', json={}, status=200)
+
+        for method in valid_methods:
+            c = curl(method, 'http://example.com')
+            assert len(c.errors) == 0, "Method {m} should be accepted".format(m=method)
 
     def test_timeout_validation_rejects_negative(self):
         """curl should reject negative timeout."""
