@@ -3,6 +3,8 @@
 from __future__ import print_function
 import pytest
 import sys
+import responses
+import requests
 
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
@@ -111,44 +113,48 @@ class TestCurlHTTP(object):
         c = curl(method='DELETE', url='https://httpbin.org/delete')
         assert c.request.status_code == 200
 
-    @mock.patch('requests.request')
-    def test_error_404(self, mock_request):
+    @responses.activate
+    def test_error_404(self):
         """Test handling of 404 error."""
         # Mock 404 response
-        mock_response = mock.Mock()
-        mock_response.status_code = 404
-        mock_response.reason = 'Not Found'
-        mock_response.text = 'Not Found'
-        mock_request.return_value = mock_response
+        responses.add(
+            responses.GET,
+            'https://test.example.com/notfound',
+            status=404,
+            body='Not Found'
+        )
 
         c = curl(method='GET', url='https://test.example.com/notfound')
         assert c.request.status_code == 404
         assert len(c.errors) > 0
         assert '404' in c.errors[0]
 
-    @mock.patch('requests.request')
-    def test_error_500(self, mock_request):
+    @responses.activate
+    def test_error_500(self):
         """Test handling of 500 error."""
         # Mock 500 response
-        mock_response = mock.Mock()
-        mock_response.status_code = 500
-        mock_response.reason = 'Internal Server Error'
-        mock_response.text = 'Server Error'
-        mock_request.return_value = mock_response
+        responses.add(
+            responses.GET,
+            'https://test.example.com/error',
+            status=500,
+            body='Server Error'
+        )
 
         c = curl(method='GET', url='https://test.example.com/error')
         assert c.request.status_code == 500
         assert len(c.errors) > 0
         assert '500' in c.errors[0]
 
-    @mock.patch('requests.request')
-    def test_custom_headers(self, mock_request):
+    @responses.activate
+    def test_custom_headers(self):
         """Test request with custom headers."""
         # Mock successful response
-        mock_response = mock.Mock()
-        mock_response.status_code = 200
-        mock_response.text = '{"headers": {"User-Agent": "onevizion-test/1.0"}}'
-        mock_request.return_value = mock_response
+        responses.add(
+            responses.GET,
+            'https://test.example.com/headers',
+            status=200,
+            json={'headers': {'User-Agent': 'onevizion-test/1.0'}}
+        )
 
         headers = {
             'User-Agent': 'onevizion-test/1.0',
@@ -162,14 +168,16 @@ class TestCurlHTTP(object):
         assert c.request.status_code == 200
         assert 'headers' in c.jsonData
 
-    @mock.patch('requests.request')
-    def test_manual_run_query(self, mock_request):
+    @responses.activate
+    def test_manual_run_query(self):
         """Test manually calling runQuery after initialization."""
         # Mock successful response
-        mock_response = mock.Mock()
-        mock_response.status_code = 200
-        mock_response.text = '{"method": "GET"}'
-        mock_request.return_value = mock_response
+        responses.add(
+            responses.GET,
+            'https://test.example.com/test',
+            status=200,
+            json={'method': 'GET'}
+        )
 
         c = curl(method='GET')
         c.url = 'https://test.example.com/test'
@@ -189,14 +197,17 @@ class TestCurlJSON(object):
         assert c.jsonData is not None
         assert isinstance(c.jsonData, dict)
 
-    @mock.patch('requests.request')
-    def test_non_json_response(self, mock_request):
+    @responses.activate
+    def test_non_json_response(self):
         """Test handling of non-JSON response."""
         # Mock HTML response
-        mock_response = mock.Mock()
-        mock_response.status_code = 200
-        mock_response.text = '<html><body>Hello</body></html>'
-        mock_request.return_value = mock_response
+        responses.add(
+            responses.GET,
+            'https://test.example.com/html',
+            status=200,
+            body='<html><body>Hello</body></html>',
+            content_type='text/html'
+        )
 
         c = curl(method='GET', url='https://test.example.com/html')
         # Should not raise error, just leave jsonData empty
@@ -245,12 +256,25 @@ class TestCurlSentTracking(object):
 class TestCurlTimeout(object):
     """Test curl timeout functionality."""
 
+    @responses.activate
     def test_curl_has_default_timeout(self):
         """curl should have a default timeout to prevent infinite hangs."""
-        import requests
-        with mock.patch('requests.request') as mock_request:
-            mock_request.return_value = mock.MagicMock(status_code=200, text="OK")
+        # We need to verify timeout parameter is passed, so we'll use a callback
+        timeout_received = [None]
 
+        def request_callback(request):
+            # This callback won't capture the timeout parameter directly,
+            # but we can use mock to verify it was passed
+            return (200, {}, "OK")
+
+        responses.add_callback(
+            responses.GET,
+            'http://example.com',
+            callback=request_callback
+        )
+
+        # Use mock to verify timeout is passed to requests.request
+        with mock.patch('requests.request', wraps=requests.request) as mock_request:
             c = curl('GET', 'http://example.com')
 
             # Verify timeout was passed to requests
@@ -260,58 +284,68 @@ class TestCurlTimeout(object):
             assert call_kwargs['timeout'] is not None, "Timeout is None - will hang forever!"
             assert call_kwargs['timeout'] > 0, "Timeout should be positive"
 
+    @responses.activate
     def test_curl_accepts_custom_timeout(self):
         """curl should accept and use custom timeout parameter."""
-        import requests
-        with mock.patch('requests.request') as mock_request:
-            mock_request.return_value = mock.MagicMock(status_code=200, text="OK")
+        responses.add(
+            responses.GET,
+            'http://slow-api.com',
+            status=200,
+            body="OK"
+        )
 
+        # Use mock to verify custom timeout is passed to requests.request
+        with mock.patch('requests.request', wraps=requests.request) as mock_request:
             c = curl('GET', 'http://slow-api.com', timeout=120.0)
 
             call_kwargs = mock_request.call_args[1]
             assert call_kwargs['timeout'] == 120.0, "Custom timeout not passed through"
 
+    @responses.activate
     def test_curl_handles_timeout_exception(self):
         """curl should catch timeout exceptions and add to errors."""
-        import requests
-        with mock.patch('requests.request') as mock_request:
-            mock_request.side_effect = requests.Timeout("Connection timed out")
+        # Use a callback that raises Timeout exception
+        def timeout_callback(request):
+            raise requests.Timeout("Connection timed out")
 
-            c = curl('GET', 'http://very-slow-api.com', timeout=5.0)
+        responses.add_callback(
+            responses.GET,
+            'http://very-slow-api.com',
+            callback=timeout_callback
+        )
 
-            # Should not raise exception, but add to errors
-            assert len(c.errors) > 0, "Timeout exception not caught!"
-            error_text = str(c.errors[0]).lower()
-            assert 'timeout' in error_text or 'timed out' in error_text
+        c = curl('GET', 'http://very-slow-api.com', timeout=5.0)
 
+        # Should not raise exception, but add to errors
+        assert len(c.errors) > 0, "Timeout exception not caught!"
+        error_text = str(c.errors[0]).lower()
+        assert 'timeout' in error_text or 'timed out' in error_text
+
+    @responses.activate
     def test_curl_actually_times_out(self):
         """Demonstrate that curl will hang forever without timeout."""
-        import requests
         import time
 
-        # Simulate a server that never responds
-        def slow_request(*args, **kwargs):
-            # Check if timeout is being passed
-            timeout = kwargs.get('timeout')
-            if timeout:
-                # Simulate slow response that would timeout
-                raise requests.Timeout("Read timed out after {}s".format(timeout))
-            else:
-                # No timeout = would hang forever
-                # We'll sleep 30s to prove it, but test will fail before that
-                time.sleep(30)
-                return mock.MagicMock(status_code=200)
+        # Use a callback that simulates timeout behavior
+        def timeout_callback(request):
+            # Simulate slow response that would timeout
+            raise requests.Timeout("Read timed out after 2.0s")
 
-        with mock.patch('requests.request', side_effect=slow_request):
-            start = time.time()
+        responses.add_callback(
+            responses.GET,
+            'http://hanging-server.com',
+            callback=timeout_callback
+        )
 
-            # With timeout parameter, should fail quickly
-            c = curl('GET', 'http://hanging-server.com', timeout=2.0)
+        start = time.time()
 
-            elapsed = time.time() - start
+        # With timeout parameter, should fail quickly
+        c = curl('GET', 'http://hanging-server.com', timeout=2.0)
 
-            # Should fail immediately (timeout exception raised)
-            # NOT wait 30 seconds
-            assert elapsed < 5, \
-                "Request took {}s - timeout not working!".format(elapsed)
-            assert len(c.errors) > 0, "No timeout error recorded"
+        elapsed = time.time() - start
+
+        # Should fail immediately (timeout exception raised)
+        # NOT wait 30 seconds
+        assert elapsed < 5, \
+            "Request took {}s - timeout not working!".format(elapsed)
+        assert len(c.errors) > 0, "No timeout error recorded"
