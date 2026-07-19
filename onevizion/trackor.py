@@ -445,7 +445,7 @@ class Trackor(object):
 		before = datetime.utcnow()
 		try:
 			# NOTE the stream=True parameter
-			self.request = requests.get(URL, stream=True, auth=self.auth,allow_redirects=True)
+			self.request = requests.get(URL, stream=True, auth=self.auth, allow_redirects=True, timeout=300.0)
 			with open(tmpFileName, 'wb') as f:
 				for chunk in self.request.iter_content(chunk_size=1024):
 					if chunk: # filter out keep-alive new chunks

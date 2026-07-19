@@ -68,8 +68,9 @@ class Import(object):
 			self.ImportURL += '&comments=' + URLEncode(self.comments)
 		if self.incremental is not None:
 			self.ImportURL += '&is_incremental=' + str(self.incremental)
-		self.ImportFile = {'file': (os.path.basename(self.file), open(self.file,'rb'))}
-		self.OVCall = curl('POST',self.ImportURL,files=self.ImportFile,auth=self.auth)
+		with open(self.file, 'rb') as import_fp:
+			self.ImportFile = {'file': (os.path.basename(self.file), import_fp)}
+			self.OVCall = curl('POST',self.ImportURL,files=self.ImportFile,auth=self.auth)
 		self.jsonData = self.OVCall.jsonData
 		self.request = self.OVCall.request
 
