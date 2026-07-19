@@ -383,3 +383,263 @@ Several architectural issues observed (not blocking this PR but worth noting):
 4. **Mutable default arguments** - Present in 12+ method signatures
 
 These are lower priority but contribute to maintenance burden and testing difficulty.
+
+---
+
+# P1/P2 Fixes Branch Review (matt/p1-p2-fixes vs matt/performance_fixing)
+
+**Review Date:** 2026-07-18
+**Reviewers:** python-pro, code-reviewer, test-automator agents
+**Branch:** `matt/p1-p2-fixes`
+**Base:** `matt/performance_fixing`
+**Total Issues:** 30 (6 Critical, 9 High, 9 Medium, 6 Low)
+
+## Executive Summary
+
+This branch introduces retry logic, session pooling, input validation, file safety features, and migrates tests from mock to responses. However, **6 critical bugs were introduced** that break core functionality:
+
+1. Session pooling completely broken (C1)
+2. Ctrl-C ignored in file downloads (C2)
+3. 3xx status codes cause silent failures (C3)
+4. URL validation bypassed (C4)
+5. Error tracking/logging gaps (C5)
+6. Broken test making real network calls (C6)
+
+**Recommendation:** Fix all 6 critical issues before merge, or split PR into smaller focused changes.
+
+---
+
+## 🔴 CRITICAL (6 issues)
+
+### C1: Session connection pooling defeated by unconditional close()
+**File:** `onevizion/curl.py:205` | **Impact:** Feature completely broken
+
+Session parameter added for connection pooling, but `response.close()` called after EVERY request returns socket to OS instead of pool.
+
+```python
+# WRONG - current code
+if self.request:
+    self.request.close()  # Defeats entire purpose of sessions
+
+# FIX
+if self.errors and self.request:
+    self.request.close()  # Only close on errors
+```
+
+---
+
+### C2: Bare except: swallows SystemExit/KeyboardInterrupt
+**Files:** `onevizion/trackor.py:516, 522, 532` | **Impact:** Ctrl-C ignored
+
+```python
+# WRONG
+try:
+    self.request.close()
+except:  # Catches EVERYTHING including Ctrl-C!
+    pass
+
+# FIX
+except Exception:  # Only normal exceptions
+    pass
+```
+
+User pressing Ctrl-C during download will have signal swallowed → process appears hung.
+
+---
+
+### C3: HTTP 3xx/1xx status codes silently consume retries
+**File:** `onevizion/curl.py:149-202` | **Impact:** Silent failures
+
+Retry loop handles 2xx (success), 4xx (error), 5xx+ (retry). But 1xx/3xx fall through → loop exits with no errors set → false success.
+
+```python
+# ADD after 5xx branch
+else:
+    reason = self.request.reason if self.request.reason else "Unknown"
+    self.errors.append(str(self.request.status_code) + " = " + reason)
+    break
+```
+
+---
+
+### C4: URL validation errors erased by first method call
+**Files:** `onevizion/trackor.py:47-56, 88+` | **Impact:** Security bypass
+
+```python
+# __init__ validates
+self.errors.append("URL protocol must be http:// or https://...")
+
+# First method call erases it!
+def delete(self):
+    self.errors = []  # Validation error gone!
+```
+
+**FIX:** Store init errors separately or raise in __init__.
+
+---
+
+### C5: Early return bypasses duration/trace logging
+**File:** `onevizion/trackor.py:481-493` | **Impact:** Monitoring gaps
+
+Size validation returns directly from try block, skipping duration calc, trace logging, error flag setting.
+
+**FIX:** Raise exception instead of return, let except block handle cleanup.
+
+---
+
+### C6: Test missing @responses.activate decorator
+**File:** `tests/test_curl_retry.py:123-140` | **Impact:** Makes REAL network calls
+
+```python
+# Missing decorator!
+def test_curl_retries_on_connection_error(self):
+    responses.add(...)  # Does nothing without @responses.activate
+```
+
+**FIX:** Add `@responses.activate` decorator.
+
+---
+
+## 🟠 HIGH (9 issues)
+
+### H1: timeout=None bypasses validation
+**File:** `onevizion/curl.py:83-91` | **Impact:** Infinite hangs
+
+Validation checks `if self.timeout is not None` → skips validation when None → creates request with no timeout → hangs forever.
+
+---
+
+### H2: self.args dict never cleared between calls
+**File:** `onevizion/curl.py:107-130` | **Impact:** Wrong parameters sent
+
+```python
+c = curl('GET', url, auth=('user','pass'))
+c.auth = None  # Want to remove auth
+c.runQuery()   # But old auth still in self.args!
+```
+
+**FIX:** `self.args = {}` at start of runQuery().
+
+---
+
+### H3: import time inside retry loop (2x)
+**Files:** `onevizion/curl.py:164, 182` | **Impact:** PEP 8 violation
+
+Move to module top.
+
+---
+
+### H4: No cap on exponential backoff
+**File:** `onevizion/curl.py:169, 184` | **Impact:** Extreme delays
+
+With max_retries=20, delay reaches 12 days! Add ceiling: `delay = min(backoff * 2^attempt, 60.0)`
+
+---
+
+### H5: Download size limit bypassed without Content-Length
+**File:** `onevizion/trackor.py:481-490` | **Impact:** Security bypass
+
+Check only runs if server sends Content-Length header. Chunked encoding bypasses it entirely.
+
+**FIX:** Track bytes written, abort if exceeded.
+
+---
+
+### H6: Double response.close() on exception
+**Files:** `onevizion/trackor.py:515, 557` | **Impact:** Unclear ownership
+
+Called in except block AND error path fallthrough.
+
+---
+
+### H7: Resource tests don't verify close() called
+**File:** `tests/test_resource_cleanup.py` | **Impact:** False confidence
+
+All tests titled "closes response" never actually assert `.close()` was called.
+
+---
+
+### H8: Exponential backoff test is flaky
+**File:** `tests/test_curl_retry.py:56-90` | **Impact:** Random CI failures
+
+Uses wall-clock timing with tight windows (0.08-0.15s) → fails on loaded CI.
+
+**FIX:** Mock time.sleep, assert call args.
+
+---
+
+### H9: None response.reason fix not tested
+**Files:** `onevizion/curl.py`, `trackor.py` | **Impact:** P1 fix unverified
+
+Defensive guards added but no test exercises reason=None case.
+
+---
+
+## 🟡 MEDIUM (9 issues)
+
+- M1: locals() used to check variable assignment
+- M2: Retry tests sleep 3+ real seconds
+- M3: os.rename fallback reassigns tmpFileName
+- M4: responses version inconsistency
+- M5: Atomic write test doesn't verify sequence
+- M6: 4 of 6 retry tests skipped on Python 2.7
+- M7: last_exception assigned but never used
+- M8: test_trackor_type_validation is non-test
+- M9: Download cleanup test may pass vacuously
+
+---
+
+## 🟢 LOW (6 issues)
+
+- L1: range() for status code checks (Python 2 perf)
+- L2: CI runs on all PRs now (cost increase)
+- L3: Content-disposition path traversal (pre-existing)
+- L4: retry_backoff default undocumented
+- L5: VCR + responses mixed in same file
+- L6: test_curl_actually_times_out misleading name
+
+---
+
+## 📊 Statistics
+
+| Severity | Count | Files |
+|----------|-------|-------|
+| CRITICAL | 6 | curl.py (2), trackor.py (3), tests (1) |
+| HIGH | 9 | curl.py (4), trackor.py (2), tests (3) |
+| MEDIUM | 9 | All files |
+| LOW | 6 | All files |
+| **TOTAL** | **30** | |
+
+---
+
+## 🎯 Immediate Actions Required
+
+1. **Remove response.close() from success path** (C1)
+2. **Fix bare except: clauses** (C2)
+3. **Add 3xx status handling** (C3)
+4. **Fix URL validation erasure** (C4)
+5. **Fix GetFile early return** (C5)
+6. **Add missing test decorator** (C6)
+
+Then address 9 HIGH priority issues before merge.
+
+---
+
+## 💭 Architectural Concerns
+
+The review reveals fundamental issues with the curl wrapper approach:
+
+1. **Too much state** - 20+ instance variables, unclear lifecycle
+2. **Side-effect constructors** - auto-runs on URL != None
+3. **Error handling debt** - errors list pattern fragile
+4. **Session ownership unclear** - who closes? when?
+5. **Testing complexity** - needs mock/responses/VCR hybrid
+
+**Recommendation:** Consider refactoring to:
+- Separate HTTP client from retry logic
+- Use requests.Session directly
+- Builder pattern for complex requests
+- Explicit context managers for resource cleanup
+
+This technical debt compounds with each feature addition (retry, pooling, validation).
+
