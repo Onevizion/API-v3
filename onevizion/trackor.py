@@ -475,7 +475,8 @@ class Trackor(object):
 		before = datetime.utcnow()
 		try:
 			# NOTE the stream=True parameter
-			self.request = requests.get(URL, stream=True, auth=self.auth,allow_redirects=True)
+
+			self.request = requests.get(URL, stream=True, auth=self.auth, allow_redirects=True, timeout=300.0)
 
 			# Validate file size if limit is set and Content-Length is available
 			if self.max_file_size is not None and 'content-length' in self.request.headers:

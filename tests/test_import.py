@@ -351,6 +351,31 @@ class TestImportRun(object):
         finally:
             os.unlink(tmp)
 
+    @mock.patch.object(_ov_Import_module, 'curl')
+    def test_import_closes_file_handle(self, mock_curl_cls):
+        """Import must close file handle to avoid resource leak."""
+        mock_curl_cls.return_value = make_mock_curl(
+            json_data={"process_id": 7, "status": "QUEUED"}
+        )
+        tmp = _make_temp_csv()
+        try:
+            imp = Import(
+                URL="https://test.onevizion.com",
+                userName="u",
+                password="p",
+                impSpecId=10,
+                file=tmp,
+            )
+            assert imp.processId == 7
+            # File handle should be closed after Import.__init__
+            # Verify by attempting to delete the file
+            os.remove(tmp)
+        finally:
+            try:
+                os.remove(tmp)
+            except:
+                pass
+
 
 class TestImportInterrupt(object):
     """Test Import.interrupt() method."""
