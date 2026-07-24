@@ -1,9 +1,40 @@
-import requests
+"""Low-level HTTP wrapper with automatic error handling and JSON parsing.
+
+This module provides the curl class, a thin wrapper around requests.request()
+that adds consistent error handling, automatic JSON parsing, and duration tracking.
+
+The curl class is used internally by all OneVizion API classes (Trackor, Import,
+Export, etc.) to make HTTP requests. It automatically:
+    - Captures and stores errors in the errors list
+    - Parses JSON responses when available
+    - Tracks request duration
+    - Applies default timeout (300s) to prevent infinite hangs
+    - Records the sent URL and arguments for debugging
+
+Example:
+    >>> from onevizion import curl
+    >>> c = curl('GET', 'https://api.example.com/data', auth=('user', 'pass'))
+    >>> if len(c.errors) == 0:
+    ...     print(c.jsonData)
+    ... else:
+    ...     print("Error:", c.errors)
+
+Note:
+    Most users should use higher-level classes like Trackor or Import rather
+    than curl directly. This class is primarily for internal use and advanced
+    custom integrations.
+"""
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import json
-from datetime import datetime
+
+import requests
+
+from onevizion.util import utcnow
+
 
 class curl(object):
-	"""Wrapper for requests.request() that will handle Error trapping and try to give JSON for calling.
+	"""Wrapper for requests.request() that handles error trapping and JSON parsing.
 	If URL is passed on Instantiation, it will automatically run, else, it will wait for you to set
 	properties, then run it with runQuery() command.  Erors should be trapped and put into "errors" array.
 	If JSON is returned, it will be put into "data" as per json.loads
@@ -71,7 +102,7 @@ class curl(object):
 		self.jsonData = {}
 		self.sentUrl = self.url
 		self.sentArgs = self.args
-		before = datetime.utcnow()
+		before = utcnow()
 		try:
 			self.request = requests.request(self.method, self.url, **self.args)
 		except Exception as e:
@@ -81,8 +112,8 @@ class curl(object):
 				self.errors.append(str(self.request.status_code)+" = "+self.request.reason+"\n"+str(self.request.text))
 			try:
 				self.jsonData = json.loads(self.request.text)
-			except Exception as err:
+			except Exception:
 				pass
-		after = datetime.utcnow()
+		after = utcnow()
 		delta = after - before
 		self.duration = delta.total_seconds()

@@ -1,11 +1,14 @@
-import requests
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import json
-from datetime import datetime
-from onevizion.util import *
+
+import requests
+
+import onevizion
 from onevizion.curl import curl
 from onevizion.httpbearer import HTTPBearerAuth
-from onevizion.EMail import EMail
-import onevizion
+from onevizion.util import *
+
 
 class Import(object):
 
@@ -51,7 +54,7 @@ class Import(object):
 		self.URL = getUrlContainingScheme(self.URL)
 
 		# If all info is filled out, go ahead and run the query.
-		if self.URL != None and self.userName != None and self.password != None and self.impSpecId != None and self.file != None:
+		if self.URL is not None and self.userName is not None and self.password is not None and self.impSpecId is not None and self.file is not None:
 			self.run()
 
 	def run(self):
@@ -77,7 +80,7 @@ class Import(object):
 		Message(self.ImportURL,2)
 		Message("FileName: {FileName}".format(FileName=self.ImportFile),2)
 		Message("Import Send completed in {Duration} seconds.".format(Duration=self.OVCall.duration),1)
-		TraceTag="{TimeStamp}:{FileName}:".format(TimeStamp=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'),FileName=self.file)
+		TraceTag="{TimeStamp}:{FileName}:".format(TimeStamp=utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'),FileName=self.file)
 		self.TraceTag = TraceTag
 		if len(self.OVCall.errors) > 0:
 			self.errors.append(self.OVCall.errors)
@@ -87,7 +90,7 @@ class Import(object):
 				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.OVCall.request.status_code),0,TraceTag+"-StatusCode")
 				TraceMessage("Reason: {Reason}".format(Reason=self.OVCall.request.reason),0,TraceTag+"-Reason")
 				TraceMessage("Body:\n{Body}".format(Body=self.OVCall.request.text),0,TraceTag+"-Body")
-			except Exception as e:
+			except Exception:
 				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.OVCall.errors,indent=2)),0,TraceTag+"-Errors")
 			onevizion.Config["Error"]=True
 		else:
@@ -128,14 +131,14 @@ class Import(object):
 		Message("Interupt Process completed in {Duration} seconds.".format(Duration=self.OVCall.duration),1)
 		if len(self.OVCall.errors) > 0:
 			self.errors.append(self.OVCall.errors)
-			TraceTag="{TimeStamp}:".format(TimeStamp=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
+			TraceTag="{TimeStamp}:".format(TimeStamp=utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
 			self.TraceTag = TraceTag
 			onevizion.Config["Trace"][TraceTag+"-URL"] = self.ImportURL
 			try:
 				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.OVCall.request.status_code),0,TraceTag+"-StatusCode")
 				TraceMessage("Reason: {Reason}".format(Reason=self.OVCall.request.reason),0,TraceTag+"-Reason")
 				TraceMessage("Body:\n{Body}".format(Body=self.OVCall.request.text),0,TraceTag+"-Body")
-			except Exception as e:
+			except Exception:
 				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.OVCall.errors,indent=2)),0,TraceTag+"-Errors")
 			onevizion.Config["Error"]=True
 		else:
@@ -177,7 +180,7 @@ class Import(object):
 			addParam('comments',comments)
 			addParam('import_name',importName)
 			addParam('owner',owner)
-			addParam('is_pdf',comments)
+			addParam('is_pdf',isPdf)
 		else:
 			if processId is None:
 				self.ImportURL += "/"+str(self.processId)
@@ -192,14 +195,14 @@ class Import(object):
 		Message("Get Process Data completed in {Duration} seconds.".format(Duration=self.OVCall.duration),1)
 		if len(self.OVCall.errors) > 0:
 			self.errors.append(self.OVCall.errors)
-			TraceTag="{TimeStamp}:".format(TimeStamp=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
+			TraceTag="{TimeStamp}:".format(TimeStamp=utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
 			self.TraceTag = TraceTag
 			onevizion.Config["Trace"][TraceTag+"-URL"] = self.ImportURL
 			try:
 				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.OVCall.request.status_code),0,TraceTag+"-StatusCode")
 				TraceMessage("Reason: {Reason}".format(Reason=self.OVCall.request.reason),0,TraceTag+"-Reason")
 				TraceMessage("Body:\n{Body}".format(Body=self.OVCall.request.text),0,TraceTag+"-Body")
-			except Exception as e:
+			except Exception:
 				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.OVCall.errors,indent=2)),0,TraceTag+"-Errors")
 			onevizion.Config["Error"]=True
 		if "status" in self.jsonData:

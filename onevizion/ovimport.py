@@ -1,5 +1,8 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import onevizion
 from onevizion.Import import Import
+
 
 class OVImport(object):
 	"""Wrapper for calling OneVizion Imports.  We have the
@@ -47,7 +50,7 @@ class OVImport(object):
 				isTokenAuth = onevizion.Config["ParameterData"][paramToken]['isTokenAuth']
 
 		# If all info is filled out, go ahead and run the query.
-		if self.URL != None and self.userName != None and self.password != None and self.impSpecId != None and self.file != None:
+		if self.URL is not None and self.userName is not None and self.password is not None and self.impSpecId is not None and self.file is not None:
 			self.makeCall()
 
 	def makeCall(self):

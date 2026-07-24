@@ -1,7 +1,11 @@
-from onevizion.util import *
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import os
 import sys
+
 import onevizion
+from onevizion.util import *
+
 
 class Singleton(object):
 	""" Make sure this process is only running once.  It does a quiet quit() if it's already running.
@@ -26,7 +30,7 @@ class Singleton(object):
 			Msg - Allows for a custom Message to be sent to console
 		"""
 		def Quit():
-			"""Handle Quitting (or not) as specified
+			"""Handle Quitting (or not) as specified.
 			"""
 			if Msg is not None and Msg != "":
 				Message(Msg)
@@ -78,7 +82,7 @@ class Singleton(object):
 		try:
 			if self.platform == 'win32':
 				if hasattr(self, 'LockFile'):
-					os.close(self.LockFileName)
+					os.close(self.LockFile)
 					os.unlink(self.LockFileName)
 			else:
 				try:

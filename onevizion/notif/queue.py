@@ -1,14 +1,14 @@
 import requests
-from onevizion.util import *
+
+import onevizion
 from onevizion.curl import curl
 from onevizion.httpbearer import HTTPBearerAuth
-from onevizion.notif.queuerecord import NotifQueueRecord
-from onevizion.notif.queuestatus import NotifQueueStatus
-import onevizion
+from onevizion.util import *
+
 
 class NotifQueue:
-	"""Wrapper for calling the Onvizion API for Notification Queue. You can get a Notifications Queue, 
-		update the status of a notification queue record, add new attempt 
+	"""Wrapper for calling the Onvizion API for Notification Queue. You can get a Notifications Queue,
+		update the status of a notification queue record, add new attempt
 
 	Attributes:
 		serviceId: ID of the Notification Service

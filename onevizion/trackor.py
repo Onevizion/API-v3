@@ -1,15 +1,63 @@
-import requests
+"""Trackor API wrapper for CRUD operations on trackor instances.
+
+This module provides the Trackor class for creating, reading, updating, and
+deleting trackor instances, as well as uploading/downloading files and assigning
+workplans.
+
+Example:
+    >>> from onevizion import Trackor
+    >>>
+    >>> # Initialize with credentials
+    >>> t = Trackor(
+    ...     trackorType="PROJECT",
+    ...     URL="https://my.onevizion.com",
+    ...     userName="user",
+    ...     password="pass"
+    ... )
+    >>>
+    >>> # Read a trackor by ID
+    >>> t.read(trackorId=12345, fields=["TRACKOR_KEY", "PROJECT_NAME"])
+    >>> print(t.jsonData)
+    >>>
+    >>> # Update trackor fields
+    >>> t.update(
+    ...     trackorId=12345,
+    ...     fields={"PROJECT_NAME": "Updated Name", "DESCRIPTION": "New desc"}
+    ... )
+    >>>
+    >>> # Create a new trackor
+    >>> t.create(
+    ...     fields={"PROJECT_NAME": "New Project"},
+    ...     parents={"PROGRAM": {"PROGRAM_KEY": "PROG-001"}}
+    ... )
+    >>>
+    >>> # Upload a file
+    >>> t.UploadFile(trackorId=12345, fieldName="F_FILE", fileName="/path/to/file.pdf")
+    >>>
+    >>> # Download a file
+    >>> filename = t.GetFile(trackorId=12345, fieldName="F_FILE")
+
+For parameter-based authentication:
+    >>> import onevizion
+    >>> onevizion.Config["ParameterData"] = {...}  # Load from JSON file
+    >>> t = Trackor(trackorType="PROJECT", paramToken="my.onevizion.com")
+"""
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import json
 from datetime import datetime
-from onevizion.util import *
+
+import requests
+
+import onevizion
 from onevizion.curl import curl
 from onevizion.httpbearer import HTTPBearerAuth
-from onevizion.EMail import EMail
-import onevizion
+from onevizion.util import *
+
 
 class Trackor(object):
-	"""Wrapper for calling the Onvizion API for Trackors.  You can Delete, Read, Update or Create new
-		Trackor instances with the like named methods.
+	"""Wrapper for calling the OneVizion API for Trackors. Supports CRUD operations,
+	file uploads/downloads, and workplan assignment.
 
 	Attributes:
 		trackorType: The name of the TrackorType being changed.
@@ -62,16 +110,7 @@ class Trackor(object):
 		Message("Deletes completed in {Duration} seconds.".format(Duration=self.OVCall.duration),1)
 		if len(self.OVCall.errors) > 0:
 			self.errors.append(self.OVCall.errors)
-			TraceTag="{TimeStamp}:".format(TimeStamp=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
-			self.TraceTag = TraceTag
-			onevizion.Config["Trace"][TraceTag+"-URL"] =  URL
-			try:
-				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.OVCall.request.status_code),0,TraceTag+"-StatusCode")
-				TraceMessage("Reason: {Reason}".format(Reason=self.OVCall.request.reason),0,TraceTag+"-Reason")
-				TraceMessage("Body:\n{Body}".format(Body=self.OVCall.request.text),0,TraceTag+"-Body")
-			except Exception as e:
-				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.OVCall.errors,indent=2)),0,TraceTag+"-Errors")
-			onevizion.Config["Error"]=True
+			self.TraceTag = LogErrorToTrace(self.OVCall, URL)
 		self.jsonData = self.OVCall.jsonData
 		self.request = self.OVCall.request
 
@@ -161,17 +200,7 @@ class Trackor(object):
 			),1)
 		if len(self.OVCall.errors) > 0:
 			self.errors.append(self.OVCall.errors)
-			TraceTag="{TimeStamp}:".format(TimeStamp=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
-			self.TraceTag = TraceTag
-			onevizion.Config["Trace"][TraceTag+"-URL"] = URL
-			onevizion.Config["Trace"][TraceTag+"-PostBody"] = json.dumps(SearchBody,indent=2)
-			try:
-				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.OVCall.request.status_code),0,TraceTag+"-StatusCode")
-				TraceMessage("Reason: {Reason}".format(Reason=self.OVCall.request.reason),0,TraceTag+"-Reason")
-				TraceMessage("Body:\n{Body}".format(Body=self.OVCall.request.text),0,TraceTag+"-Body")
-			except Exception as e:
-				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.OVCall.errors,indent=2)),0,TraceTag+"-Errors")
-			onevizion.Config["Error"]=True
+			self.TraceTag = LogErrorToTrace(self.OVCall, URL, post_body=SearchBody)
 
 
 	def update(self, trackorId=None, filters={}, fields={}, parents={}, charset=""):
@@ -201,8 +230,8 @@ class Trackor(object):
 				FieldsSection[key] = JSONEndValue(value)
 
 		ParentsSection = []
-		Parentx={}
 		for key, value in parents.items():
+			Parentx = {}
 			Parentx["trackor_type"] = key
 			FilterPart = {}
 			for fkey,fvalue in value.items():
@@ -251,17 +280,7 @@ class Trackor(object):
 			),1)
 		if len(self.OVCall.errors) > 0:
 			self.errors.append(self.OVCall.errors)
-			TraceTag="{TimeStamp}:".format(TimeStamp=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
-			self.TraceTag = TraceTag
-			onevizion.Config["Trace"][TraceTag+"-URL"] = URL
-			onevizion.Config["Trace"][TraceTag+"-PostBody"] = json.dumps(JSONObj,indent=2)
-			try:
-				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.OVCall.request.status_code),0,TraceTag+"-StatusCode")
-				TraceMessage("Reason: {Reason}".format(Reason=self.OVCall.request.reason),0,TraceTag+"-Reason")
-				TraceMessage("Body:\n{Body}".format(Body=self.OVCall.request.text),0,TraceTag+"-Body")
-			except Exception as e:
-				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.OVCall.errors,indent=2)),0,TraceTag+"-Errors")
-			onevizion.Config["Error"]=True
+			self.TraceTag = LogErrorToTrace(self.OVCall, URL, post_body=JSONObj)
 
 
 	def create(self,fields={},parents={}, charset=""):
@@ -292,8 +311,8 @@ class Trackor(object):
 				FieldsSection[key] = JSONEndValue(value)
 
 		ParentsSection = []
-		Parentx={}
 		for key, value in parents.items():
+			Parentx = {}
 			Parentx["trackor_type"] = key
 			FilterPart = {}
 			for fkey,fvalue in value.items():
@@ -326,17 +345,7 @@ class Trackor(object):
 			),1)
 		if len(self.OVCall.errors) > 0:
 			self.errors.append(self.OVCall.errors)
-			TraceTag="{TimeStamp}:".format(TimeStamp=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
-			self.TraceTag = TraceTag
-			onevizion.Config["Trace"][TraceTag+"-URL"] = URL
-			onevizion.Config["Trace"][TraceTag+"-PostBody"] = json.dumps(JSONObj,indent=2)
-			try:
-				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.OVCall.request.status_code),0,TraceTag+"-StatusCode")
-				TraceMessage("Reason: {Reason}".format(Reason=self.OVCall.request.reason),0,TraceTag+"-Reason")
-				TraceMessage("Body:\n{Body}".format(Body=self.OVCall.request.text),0,TraceTag+"-Body")
-			except Exception as e:
-				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.OVCall.errors,indent=2)),0,TraceTag+"-Errors")
-			onevizion.Config["Error"]=True
+			self.TraceTag = LogErrorToTrace(self.OVCall, URL, post_body=JSONObj)
 
 
 	def assignWorkplan(self, trackorId, workplanTemplate, name=None, isActive=False, startDate=None, finishDate=None):
@@ -353,7 +362,7 @@ class Trackor(object):
 		URL = "{website}/api/v3/trackors/{trackor_id}/assign_wp?workplan_template={workplan_template}&is_active={is_active}".format(
 				website=self.URL,
 				trackor_id=trackorId,
-				workplan_template=workplanTemplate,
+				workplan_template=URLEncode(workplanTemplate),
 				is_active=isActive
 				)
 
@@ -387,16 +396,7 @@ class Trackor(object):
 			),1)
 		if len(self.OVCall.errors) > 0:
 			self.errors.append(self.OVCall.errors)
-			TraceTag="{TimeStamp}:".format(TimeStamp=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
-			self.TraceTag = TraceTag
-			onevizion.Config["Trace"][TraceTag+"-URL"] = URL
-			try:
-				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.OVCall.request.status_code),0,TraceTag+"-StatusCode")
-				TraceMessage("Reason: {Reason}".format(Reason=self.OVCall.request.reason),0,TraceTag+"-Reason")
-				TraceMessage("Body:\n{Body}".format(Body=self.OVCall.request.text),0,TraceTag+"-Body")
-			except Exception as e:
-				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.OVCall.errors,indent=2)),0,TraceTag+"-Errors")
-			onevizion.Config["Error"]=True
+			self.TraceTag = LogErrorToTrace(self.OVCall, URL)
 
 
 	def GetFile(self, trackorId=None, fieldName=None, blobDataId=None):
@@ -439,10 +439,17 @@ class Trackor(object):
 					)
 			tmpFileName = str(blobDataId)+".tmp"
 		else:
-			self.errors.append('Bad parameters.  Use (trackorId and fieldName) or use (blobDataId)')
+			error_msg = (
+				"Invalid parameters for GetFile. "
+				"Must provide either (trackorId AND fieldName) or (blobDataId). "
+				"Got: trackorId={}, fieldName={}, blobDataId={}".format(
+					trackorId, fieldName, blobDataId
+				)
+			)
+			self.errors.append(error_msg)
 			return None
 
-		before = datetime.utcnow()
+		before = utcnow()
 		try:
 			# NOTE the stream=True parameter
 			self.request = requests.get(URL, stream=True, auth=self.auth, allow_redirects=True, timeout=300.0)
@@ -456,7 +463,7 @@ class Trackor(object):
 		else:
 			if self.request.status_code not in range(200,300):
 				self.errors.append(str(self.request.status_code)+" = "+self.request.reason)
-		after = datetime.utcnow()
+		after = utcnow()
 		delta = after - before
 		self.duration = delta.total_seconds()
 
@@ -466,25 +473,19 @@ class Trackor(object):
 			Duration=self.duration
 			),1)
 		if len(self.errors) > 0:
-			TraceTag="{TimeStamp}:".format(TimeStamp=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
-			self.TraceTag = TraceTag
-			onevizion.Config["Trace"][TraceTag+"-URL"] = URL
-			try:
-				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.request.status_code),0,TraceTag+"-StatusCode")
-				TraceMessage("Reason: {Reason}".format(Reason=self.request.reason),0,TraceTag+"-Reason")
-				TraceMessage("Body:\n{Body}".format(Body=self.request.text),0,TraceTag+"-Body")
-			except Exception as e:
-				pass
-				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.errors,indent=2)),0,TraceTag+"-Errors")
-			onevizion.Config["Error"]=True
+			# Note: GetFile uses self.request instead of self.OVCall, so create a mock object
+			class MockOVCall:
+				def __init__(self, request, errors):
+					self.request = request
+					self.errors = errors
+			self.TraceTag = LogErrorToTrace(MockOVCall(self.request, self.errors), URL)
 
 		# return the name of the fiel that was downloaded.
 		newFileName = get_filename_from_cd(self.request.headers.get('content-disposition'))
 		if newFileName is not None and len(newFileName) > 0:
 			os.rename(tmpFileName,newFileName)
 			return newFileName
-		else:
-			return tmpFileName
+		return tmpFileName
 
 
 
@@ -538,14 +539,4 @@ class Trackor(object):
 			),1)
 		if len(self.OVCall.errors) > 0:
 			self.errors.append(self.OVCall.errors)
-			TraceTag="{TimeStamp}:".format(TimeStamp=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
-			self.TraceTag = TraceTag
-			onevizion.Config["Trace"][TraceTag+"-URL"] = URL
-			onevizion.Config["Trace"][TraceTag+"-FileName"] = fileName
-			try:
-				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.OVCall.request.status_code),0,TraceTag+"-StatusCode")
-				TraceMessage("Reason: {Reason}".format(Reason=self.OVCall.request.reason),0,TraceTag+"-Reason")
-				TraceMessage("Body:\n{Body}".format(Body=self.OVCall.request.text),0,TraceTag+"-Body")
-			except Exception as e:
-				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.OVCall.errors,indent=2)),0,TraceTag+"-Errors")
-			onevizion.Config["Error"]=True
+			self.TraceTag = LogErrorToTrace(self.OVCall, URL, extra_data={"FileName": fileName})

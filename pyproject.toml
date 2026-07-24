@@ -86,13 +86,49 @@ exclude_lines = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py37"
+target-version = "py37"  # Ruff minimum; project supports py27+ via runtime compatibility
 
 [tool.ruff.lint]
+# Enable comprehensive linting rules
 select = [
-    "E9",   # Syntax errors only
-    "F63",  # Invalid print statements
-    "F7",   # Syntax errors
-    "F82",  # Undefined names
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade (but will be limited by target-version)
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "ISC",  # flake8-implicit-str-concat
+    "PIE",  # flake8-pie
+    "PYI",  # flake8-pyi
+    "RSE",  # flake8-raise
+    "RET",  # flake8-return
+    "SIM",  # flake8-simplify
+    "PTH",  # flake8-use-pathlib
 ]
-ignore = []
+
+# Ignore rules that conflict with Python 2.7 compatibility or existing code style
+ignore = [
+    "UP",    # Ignore all pyupgrade rules (Python 3+ only)
+    "PTH",   # Ignore pathlib rules (prefer os.path for Py2.7)
+    "E501",  # Line too long (we use line-length setting instead)
+    "W191",  # Tab indentation (codebase uses tabs)
+    "E101",  # Mixed spaces and tabs (tabs are intentional)
+    "B904",  # raise from (Python 3+ only)
+    "B905",  # zip strict (Python 3+ only)
+    "B006",  # Mutable argument defaults (used intentionally)
+    "N802",  # Function name should be lowercase (conflicts with existing API)
+    "N803",  # Argument name should be lowercase (conflicts with existing API)
+    "N806",  # Variable should be lowercase (conflicts with existing API)
+    "N999",  # Invalid module name (EMail.py is intentional)
+    "SIM105", # Use contextlib.suppress (Python 3+ only)
+    "SIM108", # if-else-block instead of if-exp (ternary not always clearer)
+    "F403",  # import * (used intentionally for util module)
+    "F405",  # undefined from import * (expected with F403)
+    "E402",  # Module import not at top (needed for compatibility checks)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports (re-exports)
+"tests/*" = ["B", "SIM", "F841"]  # Relax some rules for tests
