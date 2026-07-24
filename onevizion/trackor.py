@@ -445,7 +445,7 @@ class Trackor(object):
 		before = datetime.utcnow()
 		try:
 			# NOTE the stream=True parameter
-			self.request = requests.get(URL, stream=True, auth=self.auth,allow_redirects=True)
+			self.request = requests.get(URL, stream=True, auth=self.auth, allow_redirects=True, timeout=300.0)
 			with open(tmpFileName, 'wb') as f:
 				for chunk in self.request.iter_content(chunk_size=1024):
 					if chunk: # filter out keep-alive new chunks
@@ -499,11 +499,11 @@ class Trackor(object):
 
 		FilePath = fileName
 		FileName = newFileName if newFileName else os.path.basename(FilePath)
-		BinaryStream = open(FilePath, 'rb')
 
 		Message("FilePath: {FilePath}".format(FilePath=FilePath),2)
 
-		self.UploadFileByFileContents(trackorId=trackorId, fieldName=fieldName, fileName=FileName, fileContents=BinaryStream)
+		with open(FilePath, 'rb') as BinaryStream:
+			self.UploadFileByFileContents(trackorId=trackorId, fieldName=fieldName, fileName=FileName, fileContents=BinaryStream)
 
 
 	def UploadFileByFileContents(self, trackorId, fieldName, fileName, fileContents):

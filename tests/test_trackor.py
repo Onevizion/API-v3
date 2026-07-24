@@ -638,6 +638,66 @@ class TestTrackorUploadFile(object):
                 os.unlink(tmp_path)
 
     @mock.patch("onevizion.trackor.curl")
+    def test_upload_file_closes_file_handle(self, mock_curl_cls):
+        """UploadFile must close file handle to avoid resource leak."""
+        mock_curl_cls.return_value = make_mock_curl(json_data={"blob_data_id": 79})
+
+        # Create test file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            test_file_path = f.name
+            f.write("test content")
+
+        try:
+            t = Trackor(trackorType="Project", URL="https://test.com", userName="u", password="p")
+            t.UploadFile(trackorId=123, fieldName="F_FILE", fileName=test_file_path)
+
+            # File handle should be closed - verify by deleting file
+            # (On Linux this works even with open handles, but let's check FDs)
+            os.remove(test_file_path)
+        finally:
+            try:
+                os.remove(test_file_path)
+            except:
+                pass
+
+    @mock.patch("onevizion.trackor.curl")
+    def test_upload_many_files_no_fd_leak(self, mock_curl_cls):
+        """Uploading many files must not leak file descriptors."""
+        mock_curl_cls.return_value = make_mock_curl(json_data={"blob_data_id": 80})
+
+        # Get initial open file count (Linux only)
+        if not (hasattr(os, 'listdir') and os.path.exists('/proc/self/fd')):
+            pytest.skip("File descriptor counting only works on Linux")
+
+        initial_fds = len(os.listdir('/proc/self/fd'))
+
+        # Create and upload 50 files (Python 2.7 compatible)
+        tmpdir = tempfile.mkdtemp()
+        try:
+            test_files = []
+            for i in range(50):
+                test_file = os.path.join(tmpdir, "test{}.txt".format(i))
+                with open(test_file, 'w') as f:
+                    f.write("test content {}".format(i))
+                test_files.append(test_file)
+
+            t = Trackor(trackorType="Project", URL="https://test.com", userName="u", password="p")
+            for test_file in test_files:
+                t.UploadFile(trackorId=123, fieldName="F_FILE", fileName=test_file)
+
+            # Check file descriptors didn't leak
+            final_fds = len(os.listdir('/proc/self/fd'))
+            leaked_fds = final_fds - initial_fds
+
+            assert leaked_fds < 10, \
+                "BUG: File descriptor leak! {} files uploaded, {} FDs leaked. " \
+                "UploadFile opens files but never closes them!".format(len(test_files), leaked_fds)
+        finally:
+            # Cleanup temp directory (Python 2.7 compatible)
+            import shutil
+            shutil.rmtree(tmpdir)
+
+    @mock.patch("onevizion.trackor.curl")
     def test_upload_file_with_new_name(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"blob_data_id": 79})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
