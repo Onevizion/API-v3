@@ -536,8 +536,6 @@ class Trackor(object):
 
 		before = utcnow()
 		try:
-			# NOTE the stream=True parameter
-
 			self.request = requests.get(URL, stream=True, auth=self.auth, allow_redirects=True, timeout=300.0)
 
 			# Validate file size if limit is set and Content-Length is available
@@ -547,32 +545,22 @@ class Trackor(object):
 					self._safe_close_response()
 					return None
 
-			# Use atomic write: write to .tmp first, rename on success
-			atomicTmpFileName = tmpFileName + ".download"
-			with open(atomicTmpFileName, 'wb') as f:
-				for chunk in self.request.iter_content(chunk_size=1024):
-					if chunk: # filter out keep-alive new chunks
-						f.write(chunk)
-						#f.flush() commented by recommendation from J.F.Sebastian
-
-			# Rename atomic temp to regular temp name on successful download
-			try:
-				os.rename(atomicTmpFileName, tmpFileName)
-			except OSError:
-				# If rename fails (e.g., in tests), use the atomic tmp file directly
-				tmpFileName = atomicTmpFileName
-
-		except Exception as e:
-			self.errors.append(str(e))
-			self._safe_close_response()
-			# Clean up atomic temp file on error
-			if 'atomicTmpFileName' in locals():
-				self._safe_remove_file(atomicTmpFileName)
-		else:
+			# Check HTTP status before writing
 			if self.request.status_code not in range(200,300):
 				reason = self.request.reason if self.request.reason else "Unknown"
 				self.errors.append(str(self.request.status_code)+" = "+reason)
-				self._safe_remove_file(tmpFileName)
+			else:
+				# Download to file
+				with open(tmpFileName, 'wb') as f:
+					for chunk in self.request.iter_content(chunk_size=1024):
+						if chunk:  # filter out keep-alive new chunks
+							f.write(chunk)
+
+		except Exception as e:
+			self.errors.append(str(e))
+			self._safe_remove_file(tmpFileName)
+		finally:
+			self._safe_close_response()
 		after = utcnow()
 		delta = after - before
 		self.duration = delta.total_seconds()
