@@ -1,11 +1,13 @@
 """Tests for onevizion.trackor module."""
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pytest
-import sys
-import os
+
 import json
+import os
+import sys
 import tempfile
+
+import pytest
 
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
@@ -16,7 +18,7 @@ else:
     BUILTIN_OPEN = '__builtin__.open'
 
 import requests
-import onevizion.trackor
+
 from onevizion.trackor import Trackor
 
 
@@ -301,6 +303,52 @@ class TestTrackorUpdate(object):
         assert t.errors == []
 
     @mock.patch("onevizion.trackor.curl")
+    def test_update_with_multiple_parents_distinct(self, mock_curl_cls):
+        """Test that multiple parents are sent as distinct objects, not duplicates.
+
+        This is a regression test for bug H2 where Parentx={} was created once
+        before the loop, causing all parent references to point to the same dict.
+        This resulted in multi-parent updates sending the last parent N times
+        instead of N distinct parents.
+
+        Note: Parents can only be updated when using filters (not trackorId),
+        per the OneVizion API design.
+        """
+        mock_curl_cls.return_value = make_mock_curl(json_data={})
+        t = Trackor(trackorType="Asset", URL="https://test.onevizion.com", userName="u", password="p")
+        t.update(
+            filters={"TRACKOR_KEY": "ASSET-001"},
+            fields={"F_STATUS": "Active"},
+            parents={
+                "Program": {"TRACKOR_KEY": "PROG-001"},
+                "Portfolio": {"TRACKOR_KEY": "PORT-001"},
+                "Department": {"TRACKOR_KEY": "DEPT-001"}
+            },
+        )
+        # Get the JSON data that was sent
+        call_kwargs = mock_curl_cls.call_args[1]
+        sent_data = json.loads(call_kwargs["data"])
+
+        # Verify we have 3 distinct parents
+        assert "parents" in sent_data
+        assert len(sent_data["parents"]) == 3
+
+        # Verify each parent is distinct (not all the same)
+        parent_types = [p["trackor_type"] for p in sent_data["parents"]]
+        assert "Program" in parent_types
+        assert "Portfolio" in parent_types
+        assert "Department" in parent_types
+
+        # Verify filters are correct for each
+        for parent in sent_data["parents"]:
+            if parent["trackor_type"] == "Program":
+                assert parent["filter"]["TRACKOR_KEY"] == "PROG-001"
+            elif parent["trackor_type"] == "Portfolio":
+                assert parent["filter"]["TRACKOR_KEY"] == "PORT-001"
+            elif parent["trackor_type"] == "Department":
+                assert parent["filter"]["TRACKOR_KEY"] == "DEPT-001"
+
+    @mock.patch("onevizion.trackor.curl")
     def test_update_with_charset(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
@@ -367,6 +415,42 @@ class TestTrackorCreate(object):
             parents={"Program": {"TRACKOR_KEY": "PROG-1"}},
         )
         assert t.errors == []
+
+    @mock.patch("onevizion.trackor.curl")
+    def test_create_with_multiple_parents_distinct(self, mock_curl_cls):
+        """Test that create with multiple parents sends distinct objects.
+
+        Regression test for bug H2 - same as test_update_with_multiple_parents_distinct
+        but for the create() method.
+        """
+        mock_curl_cls.return_value = make_mock_curl(json_data={"TRACKOR_ID": 999})
+        t = Trackor(trackorType="Asset", URL="https://test.onevizion.com", userName="u", password="p")
+        t.create(
+            fields={"F_NAME": "New Asset"},
+            parents={
+                "Location": {"TRACKOR_KEY": "LOC-001"},
+                "Owner": {"TRACKOR_KEY": "OWN-001"}
+            },
+        )
+        # Get the JSON data that was sent
+        call_kwargs = mock_curl_cls.call_args[1]
+        sent_data = json.loads(call_kwargs["data"])
+
+        # Verify we have 2 distinct parents
+        assert "parents" in sent_data
+        assert len(sent_data["parents"]) == 2
+
+        # Verify each parent is distinct
+        parent_types = [p["trackor_type"] for p in sent_data["parents"]]
+        assert "Location" in parent_types
+        assert "Owner" in parent_types
+
+        # Verify filters are correct
+        for parent in sent_data["parents"]:
+            if parent["trackor_type"] == "Location":
+                assert parent["filter"]["TRACKOR_KEY"] == "LOC-001"
+            elif parent["trackor_type"] == "Owner":
+                assert parent["filter"]["TRACKOR_KEY"] == "OWN-001"
 
     @mock.patch("onevizion.trackor.curl")
     def test_create_with_charset(self, mock_curl_cls):
@@ -535,7 +619,7 @@ class TestTrackorGetFile(object):
         result = t.GetFile()
         assert result is None
         assert len(t.errors) > 0
-        assert "Bad parameters" in t.errors[0]
+        assert "Invalid parameters" in t.errors[0]
 
     @mock.patch("onevizion.trackor.requests.get", side_effect=Exception("Connection timed out"))
     @mock.patch(BUILTIN_OPEN, create=True)
@@ -660,7 +744,7 @@ class TestTrackorUploadFile(object):
         finally:
             try:
                 os.remove(test_file_path)
-            except:
+            except Exception:
                 pass
 
     @mock.patch("onevizion.trackor.curl")
@@ -692,9 +776,10 @@ class TestTrackorUploadFile(object):
             final_fds = len(os.listdir('/proc/self/fd'))
             leaked_fds = final_fds - initial_fds
 
-            assert leaked_fds < 10, \
-                "BUG: File descriptor leak! {} files uploaded, {} FDs leaked. " \
+            assert leaked_fds < 10, (
+                "BUG: File descriptor leak! {} files uploaded, {} FDs leaked. "
                 "UploadFile opens files but never closes them!".format(len(test_files), leaked_fds)
+            )
         finally:
             # Cleanup temp directory (Python 2.7 compatible)
             import shutil

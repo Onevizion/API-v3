@@ -1,11 +1,14 @@
-import requests
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import json
-from datetime import datetime
-from onevizion.util import *
+
+import requests
+
+import onevizion
 from onevizion.curl import curl
 from onevizion.httpbearer import HTTPBearerAuth
-from onevizion.EMail import EMail
-import onevizion
+from onevizion.util import *
+
 
 class WorkPlan(object):
 	"""Wrapper for calling the OneVizion API for WorkPlans.  You can Read or Update
@@ -72,13 +75,13 @@ class WorkPlan(object):
 		Message("Workplan read completed in {Duration} seconds.".format(Duration=self.OVCall.duration),1)
 		if len(self.OVCall.errors) > 0:
 			self.errors.append(self.OVCall.errors)
-			TraceTag="{TimeStamp}:".format(TimeStamp=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
+			TraceTag="{TimeStamp}:".format(TimeStamp=utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
 			self.TraceTag = TraceTag
 			onevizion.Config["Trace"][TraceTag+"-URL"] = URL
 			try:
 				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.OVCall.request.status_code),0,TraceTag+"-StatusCode")
 				TraceMessage("Reason: {Reason}".format(Reason=self.OVCall.request.reason),0,TraceTag+"-Reason")
 				TraceMessage("Body:\n{Body}".format(Body=self.OVCall.request.text),0,TraceTag+"-Body")
-			except Exception as e:
+			except Exception:
 				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.OVCall.errors,indent=2)),0,TraceTag+"-Errors")
 			onevizion.Config["Error"]=True

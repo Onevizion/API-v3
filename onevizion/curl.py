@@ -1,9 +1,41 @@
-import requests
+"""Low-level HTTP wrapper with automatic error handling and JSON parsing.
+
+This module provides the curl class, a thin wrapper around requests.request()
+that adds consistent error handling, automatic JSON parsing, and duration tracking.
+
+The curl class is used internally by all OneVizion API classes (Trackor, Import,
+Export, etc.) to make HTTP requests. It automatically:
+    - Captures and stores errors in the errors list
+    - Parses JSON responses when available
+    - Tracks request duration
+    - Applies default timeout (300s) to prevent infinite hangs
+    - Records the sent URL and arguments for debugging
+
+Example:
+    >>> from onevizion import curl
+    >>> c = curl('GET', 'https://api.example.com/data', auth=('user', 'pass'))
+    >>> if len(c.errors) == 0:
+    ...     print(c.jsonData)
+    ... else:
+    ...     print("Error:", c.errors)
+
+Note:
+    Most users should use higher-level classes like Trackor or Import rather
+    than curl directly. This class is primarily for internal use and advanced
+    custom integrations.
+"""
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import json
-from datetime import datetime
+import time
+
+import requests
+
+from onevizion.util import utcnow
+
 
 class curl(object):
-	"""Wrapper for requests.request() that will handle Error trapping and try to give JSON for calling.
+	"""Wrapper for requests.request() that handles error trapping and JSON parsing.
 	If URL is passed on Instantiation, it will automatically run, else, it will wait for you to set
 	properties, then run it with runQuery() command.  Erors should be trapped and put into "errors" array.
 	If JSON is returned, it will be put into "data" as per json.loads
@@ -41,9 +73,20 @@ class curl(object):
 		self.duration = None
 		self.sentUrl = None
 		self.sentArgs = None
+
+		# Validate and apply kwargs - only allow known requests parameters
+		_allowed_kwargs = {
+			'params', 'data', 'headers', 'cookies', 'files', 'auth',
+			'timeout', 'allow_redirects', 'proxies', 'hooks', 'stream',
+			'verify', 'cert', 'json'
+		}
 		for key, value in kwargs.items():
-			self.args[key] = value
-			setattr(self, key, value)
+			if key in _allowed_kwargs:
+				self.args[key] = value
+				setattr(self, key, value)
+			else:
+				# Store unknown kwargs in args but don't set as attributes
+				self.args[key] = value
 
 		if self.url is not None:
 			self.runQuery()
@@ -67,7 +110,7 @@ class curl(object):
 
 		# Validate URL protocol (security: prevent javascript:, file:, data: etc.)
 		url_lower = str(self.url).lower()
-		if not (url_lower.startswith('http://') or url_lower.startswith('https://')):
+		if not url_lower.startswith(('http://', 'https://')):
 			self.errors.append("URL protocol must be http:// or https://. Got: {url}".format(url=self.url))
 			return False
 
@@ -105,102 +148,97 @@ class curl(object):
 		return True
 
 	def runQuery(self):
-		# Clear previous errors and jsonData
+		# Reset state for new request (preserves ability to inspect after multiple calls)
+		# Note: Previous errors/data are cleared - store them separately if needed
 		self.errors = []
 		self.jsonData = {}
+		self.request = None
+		self.duration = None
 
 		# Validate inputs before making request
 		if not self._validate_inputs():
 			# Validation failed, errors already set
 			return
 
-		self.setArg('params', self.params)
-		self.setArg('data', self.data)
-		self.setArg('headers', self.headers)
-		self.setArg('cookies', self.cookies)
-		self.setArg('files', self.files)
-		self.setArg('auth', self.auth)
-		self.setArg('timeout', self.timeout)
-		self.setArg('allow_redirects', self.allow_redirects)
-		self.setArg('proxies', self.proxies)
-		self.setArg('hooks', self.hooks)
-		self.setArg('stream', self.stream)
-		self.setArg('verify', self.verify)
-		self.setArg('cert', self.cert)
-		self.setArg('json', self.json)
+		# Build args dictionary from instance attributes
+		for attr in ('params', 'data', 'headers', 'cookies', 'files', 'auth',
+		             'timeout', 'allow_redirects', 'proxies', 'hooks', 'stream',
+		             'verify', 'cert', 'json'):
+			self.setArg(attr, getattr(self, attr))
 
 		self.sentUrl = self.url
 		self.sentArgs = self.args
-		before = datetime.utcnow()
+		before = utcnow()
 
 		# Retry logic for transient failures
 		attempt = 0
-		last_exception = None
 
 		while attempt <= self.max_retries:
 			try:
 				# Use session if provided, otherwise use requests module
-				if self.session:
-					self.request = self.session.request(self.method, self.url, **self.args)
-				else:
-					self.request = requests.request(self.method, self.url, **self.args)
+				requester = self.session if self.session else requests
+				self.request = requester.request(self.method, self.url, **self.args)
 
 				# Check if response indicates success or permanent failure
 				if self.request.status_code in range(200, 300):
 					# Success - parse JSON and exit
 					try:
 						self.jsonData = json.loads(self.request.text)
-					except Exception as err:
+					except Exception:
 						pass
 					break
-				elif self.request.status_code in range(400, 500):
-					# 4xx = client error (permanent) - don't retry
-					reason = self.request.reason if self.request.reason else "Unknown"
-					self.errors.append(str(self.request.status_code)+" = "+reason+"\n"+str(self.request.text))
+				if self.request.status_code in range(300, 400):
+					# 3xx redirect - either handled by requests or error if allow_redirects=False
+					# Treat as permanent failure (should have been auto-handled)
+					self._append_http_error()
 					break
-				elif self.request.status_code >= 500:
+				if self.request.status_code in range(400, 500):
+					# 4xx = client error (permanent) - don't retry
+					self._append_http_error()
+					break
+				if self.request.status_code >= 500:
 					# 5xx = server error (transient) - retry
 					if attempt < self.max_retries:
-						import time
 						# Close failed response before retrying
 						if self.request:
 							self.request.close()
-						delay = self.retry_backoff * (2 ** attempt)  # Exponential backoff
-						time.sleep(delay)
+						self._sleep_with_backoff(attempt)
 						attempt += 1
 						continue
-					else:
-						# Max retries reached
-						reason = self.request.reason if self.request.reason else "Unknown"
-						self.errors.append(str(self.request.status_code)+" = "+reason+"\n"+str(self.request.text))
-						break
+					# Max retries reached
+					self._append_http_error()
+					break
 
 			except (requests.ConnectionError, requests.Timeout) as e:
 				# Network errors (transient) - retry
-				last_exception = e
 				if attempt < self.max_retries:
-					import time
-					delay = self.retry_backoff * (2 ** attempt)
-					time.sleep(delay)
+					self._sleep_with_backoff(attempt)
 					attempt += 1
 					continue
-				else:
-					# Max retries reached
-					self.errors.append(str(e))
-					break
+				# Max retries reached
+				self.errors.append(str(e))
+				break
 
 			except Exception as e:
 				# Other errors - don't retry
 				self.errors.append(str(e))
 				break
 
-			attempt += 1
-
-		after = datetime.utcnow()
+		after = utcnow()
 		delta = after - before
 		self.duration = delta.total_seconds()
 
 		# Close the final response to free connection resources
 		if self.request:
 			self.request.close()
+
+	def _append_http_error(self):
+		"""Append HTTP error message from response."""
+		reason = self.request.reason if self.request.reason else "Unknown"
+		self.errors.append(str(self.request.status_code)+" = "+reason+"\n"+str(self.request.text))
+
+	def _sleep_with_backoff(self, attempt):
+		"""Sleep with exponential backoff."""
+		delay = self.retry_backoff * (2 ** attempt)
+		time.sleep(delay)
 

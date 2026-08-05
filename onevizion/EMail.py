@@ -1,9 +1,10 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import smtplib
-from datetime import datetime
-import base64
 from collections import OrderedDict
-from onevizion.util import *
+
 import onevizion
+from onevizion.util import *
 
 # older version compatibility
 try:
@@ -46,9 +47,8 @@ class EMail(object):
 		self.body = ""
 		self.files = []
 		self.duration = 0
-		if SMTP == {}:
-			if onevizion.Config["SMTPToken"] is not None:
-				SMTP = onevizion.Config["ParameterData"][onevizion.Config["SMTPToken"]]
+		if SMTP == {} and onevizion.Config["SMTPToken"] is not None:
+			SMTP = onevizion.Config["ParameterData"][onevizion.Config["SMTPToken"]]
 				#self.parameterData(onevizion.Config["ParameterData"][SMTP])
 		if 'UserName' in SMTP and 'Password' in SMTP and 'Server' in SMTP:
 			self.parameterData(SMTP)
@@ -69,11 +69,10 @@ class EMail(object):
 			CC: CC email, can be single email adress as sting, or a list of strings.
 		"""
 		if 'UserName' not in SMTP or 'Password' not in SMTP or 'Server' not in SMTP:
-			raise ("UserName,Password,and Server are required in the PasswordData json")
-		else:
-			self.server = SMTP['Server']
-			self.userName = SMTP['UserName']
-			self.password = SMTP['Password']
+			raise ValueError("UserName, Password, and Server are required in the PasswordData json")
+		self.server = SMTP['Server']
+		self.userName = SMTP['UserName']
+		self.password = SMTP['Password']
 		if 'Port' in SMTP:
 			self.port = int(SMTP['Port'])
 		if 'TLS' in SMTP:
@@ -101,10 +100,8 @@ class EMail(object):
 		"""Main work body, sends email with preconfigured attributes
 		"""
 		import mimetypes
-
-		from optparse import OptionParser
-
 		from email import encoders
+
 		#from email.message import Message
 		from email.mime.audio import MIMEAudio
 		from email.mime.base import MIMEBase
@@ -170,7 +167,7 @@ class EMail(object):
 
 
 
-		before = datetime.utcnow()
+		before = utcnow()
 		Message("Sending Email...",1)
 		Message("To: {ToList}".format(ToList=msg['To']),2)
 		Message("From: {From}".format(From=msg['From']),2)
@@ -188,7 +185,7 @@ class EMail(object):
 		send.sendmail(str(self.sender),self.to, msg.as_string())
 		send.quit()
 
-		after = datetime.utcnow()
+		after = utcnow()
 		delta = after - before
 		self.duration = delta.total_seconds()
 		Message("Sent Mail in {Duration} seconds.".format(Duration=self.duration),1)

@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class NotifQueueStatus(Enum):
 	BUILDING = 0
 	NOT_SENT = 1

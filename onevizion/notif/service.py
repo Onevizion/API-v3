@@ -1,18 +1,22 @@
-from onevizion.util import *
 import sys
+
+from onevizion.util import *
+
 if sys.version_info[0] >= 3:
     from abc import ABC, abstractmethod
 else:
     from abc import ABCMeta, abstractmethod
     # Python 2 compatibility - create ABC-like base
     ABC = ABCMeta('ABC', (object,), {'__module__': __name__})
+import time
+from warnings import warn
+
 from onevizion.module.log import IntegrationLog, ModuleLog
 from onevizion.module.loglevel import LogLevel
 from onevizion.notif.queue import NotifQueue
 from onevizion.notif.queuerecord import NotifQueueRecord
 from onevizion.notif.queuestatus import NotifQueueStatus
-from warnings import warn
-import time
+
 
 class NotificationService(ABC):
 	"""Wrapper for getting records from the notification queue and sending them somewhere.
@@ -25,7 +29,7 @@ class NotificationService(ABC):
 		userName: the username or the OneVizion API Security Token Access Key that is used to login to the system
 		password: the password or the OneVizion API Security Token Secret Key that is used to gain access to the system
 		logLevel: log level name (Info, Warning, Error, Debug) for logging Module actions
-		maxAttempts: the number of attempts to send message 
+		maxAttempts: the number of attempts to send message
 		nextAttemptDelay: the delay in seconds before the next message sending after an unsuccessful attempt
 
 	Exceptions are processed, written to the log and an exception is thrown for methods:
@@ -42,7 +46,7 @@ class NotificationService(ABC):
 		self._integrationLog = IntegrationLog(processId, URL, userName, password, paramToken, isTokenAuth, logLevel)
 
 	def __getattribute__(self, item):
-		if '_integrationLog' == item:
+		if item == '_integrationLog':
 			warn('{0} is deprecated. Use _moduleLog instead.'.format(item), DeprecationWarning, stacklevel=2)
 
 		return object.__getattribute__(self, item)
@@ -127,10 +131,9 @@ class NotificationService(ABC):
 
 	@abstractmethod
 	def sendNotification(self, notifQueueRecord):
-		"""Send notifications anywhere. You must implement this in your module. 
+		"""Send notifications anywhere. You must implement this in your module.
 			"notifQueueRecord": record from the notification queue. An instance of the NotifQueueRecord class
 		"""
-		pass
 
 	def _prepareNotifQueue(self, notifQueue):
 		return notifQueue

@@ -1,7 +1,12 @@
-from onevizion.util import *
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import os
 import sys
+import warnings
+
 import onevizion
+from onevizion.util import *
+
 
 class Singleton(object):
 	""" Make sure this process is only running once.  It does a quiet quit() if it's already running.
@@ -24,9 +29,20 @@ class Singleton(object):
 				"error" - exit with error code -1
 				"none" - set property and continue running
 			Msg - Allows for a custom Message to be sent to console
+
+		DEPRECATED: This class is deprecated and will be removed in version 2.0.0.
+		Use process managers (systemd, supervisor), container orchestration (Docker, Kubernetes),
+		or distributed locking (Redis) instead. File-based locking is brittle and outdated.
 		"""
+		warnings.warn(
+			"Singleton is deprecated and will be removed in v2.0.0. "
+			"Use systemd, supervisor, Docker, or Redis for process management instead.",
+			DeprecationWarning,
+			stacklevel=2
+		)
+
 		def Quit():
-			"""Handle Quitting (or not) as specified
+			"""Handle Quitting (or not) as specified.
 			"""
 			if Msg is not None and Msg != "":
 				Message(Msg)
@@ -78,7 +94,7 @@ class Singleton(object):
 		try:
 			if self.platform == 'win32':
 				if hasattr(self, 'LockFile'):
-					os.close(self.LockFileName)
+					os.close(self.LockFile)
 					os.unlink(self.LockFileName)
 			else:
 				try:

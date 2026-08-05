@@ -1,12 +1,15 @@
-import requests
 import json
+
 # "deprecated" has been used since version 3.13.
 from warnings import warn
-from onevizion.util import *
-from onevizion.curl import curl
-from onevizion.module.loglevel import LogLevel
-from onevizion.httpbearer import HTTPBearerAuth
+
+import requests
+
 import onevizion
+from onevizion.curl import curl
+from onevizion.httpbearer import HTTPBearerAuth
+from onevizion.module.loglevel import LogLevel
+from onevizion.util import *
 
 
 class ModuleLog(object):
@@ -46,7 +49,7 @@ class ModuleLog(object):
 			self._auth = requests.auth.HTTPBasicAuth(self._userName, self._password)
 
 		self._ovLogLevel = LogLevel.getLogLevelByName(logLevelName)
- 
+
 
 	def add(self, logLevel, message, description=""):
 		if logLevel.logLevelId <= self._ovLogLevel.logLevelId:
@@ -58,13 +61,14 @@ class ModuleLog(object):
 			if len(OVCall.errors) > 0:
 				raise Exception(OVCall.errors)
 			return OVCall.jsonData
+		return None
 
 
 # deprecated has been used since version 3.13
 # @deprecated("Use ModuleLog instead")
 class IntegrationLog(object):
 	"""Wrapper for adding logs to the OneVizion.
-	
+
 	This class is deprecated. Use ModuleLog instead.
 	"""
 
@@ -73,7 +77,7 @@ class IntegrationLog(object):
 		warn('{0} is deprecated. Use ModuleLog instead.'.format(self.__class__.__name__), DeprecationWarning, stacklevel=2)
 
 		self._module_log = ModuleLog(processId, URL, userName, password, paramToken, isTokenAuth, logLevelName)
- 
+
 
 	def add(self, logLevel, message, description=""):
 		self._module_log.add(logLevel, message, description)

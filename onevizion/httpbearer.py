@@ -1,6 +1,7 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import requests
-import urllib
-import smtplib
+
 
 class HTTPBearerAuth(requests.auth.AuthBase):
 	"""Wrapper to create the header needed for authentication using a token

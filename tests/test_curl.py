@@ -1,10 +1,12 @@
 """Tests for onevizion.curl module."""
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pytest
+
 import sys
-import responses
+
+import pytest
 import requests
+import responses
 
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
@@ -13,6 +15,7 @@ else:
     import mock
 
 import vcr
+
 from onevizion.curl import curl
 
 

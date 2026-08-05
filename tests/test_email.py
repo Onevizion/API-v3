@@ -1,11 +1,11 @@
 """Tests for onevizion.EMail module."""
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pytest
+
 import sys
-import tempfile
-import os
 from collections import OrderedDict
+
+import pytest
 
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
@@ -15,7 +15,6 @@ else:
 
 import onevizion
 from onevizion.EMail import EMail
-
 
 SMTP_CONFIG = {
     "UserName": "sender@example.com",
@@ -85,7 +84,7 @@ class TestEMailParameterData(object):
         assert email.security == "STARTTLS"
 
     def test_parameter_data_with_from(self):
-        cfg = dict(SMTP_CONFIG, **{"From": "from@example.com"})
+        cfg = dict(SMTP_CONFIG, From="from@example.com")
         email = EMail()
         email.parameterData(cfg)
         assert email.sender == "from@example.com"
@@ -121,9 +120,16 @@ class TestEMailParameterData(object):
         assert "cc1@example.com" in email.cc
 
     def test_parameter_data_raises_on_missing_required(self):
+        """Verify that ValueError is raised (not TypeError) when SMTP credentials are missing.
+
+        This is a regression test for bug C3 where raise("string") was used instead of
+        raise ValueError("string"), which caused TypeError in Python 3.
+        """
         email = EMail()
-        with pytest.raises((Exception, TypeError)):
+        with pytest.raises(ValueError) as exc_info:
             email.parameterData({"Server": "smtp.example.com"})
+        assert "UserName" in str(exc_info.value)
+        assert "Password" in str(exc_info.value)
 
     def test_password_data_is_alias_for_parameter_data(self):
         email = EMail()
