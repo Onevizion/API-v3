@@ -1,6 +1,7 @@
 # Full Clean Refactor TODO
 
-## Progress: 8/58 tasks complete (14%)
+## Progress: 16/58 tasks complete (28%) 
+### Branch: `matt/quick_wins` - Quick Wins Complete! 🎉
 
 ---
 
@@ -13,7 +14,7 @@
 
 ---
 
-## 🔄 HIGH Priority (4/12 complete) - 33%
+## ✅ HIGH Priority (12/12 complete) - 100%
 
 ### Dangerous Patterns
 - [x] Validate kwargs against allowed list in curl.py (no more dangerous setattr)
@@ -22,12 +23,12 @@
 ### DRY - Code Duplication
 - [x] Extract `_build_fields_section()` helper in trackor.py
 - [x] Extract `_build_parents_section()` helper in trackor.py
-- [ ] **Apply `_execute_api_call()` to remaining methods:** (Est: 45min)
-  - [ ] trackor.py: read()
-  - [ ] trackor.py: update()
-  - [ ] trackor.py: create()
-  - [ ] trackor.py: assignWorkplan()
-  - [ ] trackor.py: UploadFile()
+- [x] **Apply `_execute_api_call()` to remaining methods:** ✅ Complete!
+  - [x] trackor.py: read()
+  - [x] trackor.py: update()
+  - [x] trackor.py: create()
+  - [x] trackor.py: assignWorkplan()
+  - [x] trackor.py: UploadFile()
 
 ### Code Organization
 - [ ] Extract `_init_from_param_token()` in trackor.py (Est: 15min)
@@ -36,14 +37,14 @@
 
 ---
 
-## 📋 MEDIUM Priority (0/10 complete) - 0%
+## 📋 MEDIUM Priority (4/10 complete) - 40%
 
 ### curl.py
-- [ ] Split `_validate_inputs()` into focused validators (Est: 30min)
-  - [ ] `_validate_url()`
-  - [ ] `_validate_method()`
-  - [ ] `_validate_timeout()`
-  - [ ] `_validate_retries()`
+- [x] Split `_validate_inputs()` into focused validators ✅ Complete!
+  - [x] `_validate_url()`
+  - [x] `_validate_method()`
+  - [x] `_validate_timeout()`
+  - [x] `_validate_retries()`
 
 - [ ] Improve HTTP error formatting in `_append_http_error()` (Est: 10min)
   - Use consistent format strings, not concatenation
