@@ -744,7 +744,7 @@ class TestTrackorUploadFile(object):
         finally:
             try:
                 os.remove(test_file_path)
-            except:
+            except Exception:
                 pass
 
     @mock.patch("onevizion.trackor.curl")
@@ -776,9 +776,10 @@ class TestTrackorUploadFile(object):
             final_fds = len(os.listdir('/proc/self/fd'))
             leaked_fds = final_fds - initial_fds
 
-            assert leaked_fds < 10, \
-                "BUG: File descriptor leak! {} files uploaded, {} FDs leaked. " \
+            assert leaked_fds < 10, (
+                "BUG: File descriptor leak! {} files uploaded, {} FDs leaked. "
                 "UploadFile opens files but never closes them!".format(len(test_files), leaked_fds)
+            )
         finally:
             # Cleanup temp directory (Python 2.7 compatible)
             import shutil

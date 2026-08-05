@@ -373,7 +373,7 @@ class TestImportRun(object):
         finally:
             try:
                 os.remove(tmp)
-            except:
+            except Exception:
                 pass
 
 

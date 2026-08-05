@@ -135,3 +135,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Allow unused imports (re-exports)
 "tests/*" = ["B", "SIM", "F841"]  # Relax some rules for tests
+"onevizion/curl.py" = ["N801"]  # curl class name is intentional for backwards compat
+"onevizion/EMail.py" = ["E722", "SIM115"]  # Legacy file, not in refactor scope
+"onevizion/singleton.py" = ["SIM115"]  # Legacy file, not in refactor scope
+"tests/test_import.py" = ["N816"]  # Test module naming convention
