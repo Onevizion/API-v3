@@ -1,11 +1,11 @@
 """Tests for onevizion.EMail module."""
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pytest
+
 import sys
-import tempfile
-import os
 from collections import OrderedDict
+
+import pytest
 
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
@@ -15,7 +15,6 @@ else:
 
 import onevizion
 from onevizion.EMail import EMail
-
 
 SMTP_CONFIG = {
     "UserName": "sender@example.com",
@@ -85,7 +84,7 @@ class TestEMailParameterData(object):
         assert email.security == "STARTTLS"
 
     def test_parameter_data_with_from(self):
-        cfg = dict(SMTP_CONFIG, **{"From": "from@example.com"})
+        cfg = dict(SMTP_CONFIG, From="from@example.com")
         email = EMail()
         email.parameterData(cfg)
         assert email.sender == "from@example.com"

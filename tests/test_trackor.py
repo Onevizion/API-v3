@@ -1,11 +1,13 @@
 """Tests for onevizion.trackor module."""
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pytest
-import sys
-import os
+
 import json
+import os
+import sys
 import tempfile
+
+import pytest
 
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
@@ -16,7 +18,7 @@ else:
     BUILTIN_OPEN = '__builtin__.open'
 
 import requests
-import onevizion.trackor
+
 from onevizion.trackor import Trackor
 
 

@@ -1,10 +1,10 @@
 """Tests for onevizion.Import module."""
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pytest
-import sys
-import os
+
 import json
+import os
+import sys
 import tempfile
 
 # Python 2/3 compatibility
@@ -12,9 +12,6 @@ if sys.version_info[0] >= 3:
     from unittest import mock
 else:
     import mock
-
-import onevizion.Import
-from onevizion.Import import Import
 
 # Grab the onevizion.Import MODULE object directly from sys.modules so that
 # mock.patch.object can patch the 'curl' name in that module's namespace.
@@ -26,6 +23,9 @@ from onevizion.Import import Import
 # pkgutil.resolve_name which correctly resolves the module.  Using sys.modules gives us
 # the module object directly and works across all Python versions.
 import sys as _sys
+
+from onevizion.Import import Import
+
 _ov_Import_module = _sys.modules['onevizion.Import']
 
 
