@@ -97,24 +97,20 @@ class curl(object):
 		if value is not None:
 			self.args[key] = value
 
-	def _validate_inputs(self):
-		"""Validate inputs for security and correctness.
-
-		Returns True if validation passes, False otherwise.
-		Errors are appended to self.errors.
-		"""
-		# Validate URL
+	def _validate_url(self):
+		"""Validate URL is present and uses http/https protocol."""
 		if not self.url:
 			self.errors.append("URL is required and cannot be empty")
 			return False
 
-		# Validate URL protocol (security: prevent javascript:, file:, data: etc.)
 		url_lower = str(self.url).lower()
 		if not url_lower.startswith(('http://', 'https://')):
 			self.errors.append("URL protocol must be http:// or https://. Got: {url}".format(url=self.url))
 			return False
+		return True
 
-		# Validate HTTP method
+	def _validate_method(self):
+		"""Validate HTTP method is supported."""
 		valid_methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 		if self.method.upper() not in valid_methods:
 			self.errors.append("Invalid HTTP method: {method}. Must be one of: {valid}".format(
@@ -122,30 +118,46 @@ class curl(object):
 				valid=', '.join(valid_methods)
 			))
 			return False
-
-		# Validate timeout (must be positive)
-		if self.timeout is not None:
-			try:
-				timeout_val = float(self.timeout)
-				if timeout_val <= 0:
-					self.errors.append("Timeout must be positive. Got: {timeout}".format(timeout=self.timeout))
-					return False
-			except (TypeError, ValueError):
-				self.errors.append("Timeout must be a number. Got: {timeout}".format(timeout=self.timeout))
-				return False
-
-		# Validate max_retries (must be non-negative)
-		if self.max_retries is not None:
-			try:
-				retries_val = int(self.max_retries)
-				if retries_val < 0:
-					self.errors.append("Max retries must be non-negative. Got: {retries}".format(retries=self.max_retries))
-					return False
-			except (TypeError, ValueError):
-				self.errors.append("Max retries must be an integer. Got: {retries}".format(retries=self.max_retries))
-				return False
-
 		return True
+
+	def _validate_timeout(self):
+		"""Validate timeout is a positive number."""
+		if self.timeout is None:
+			return True
+		try:
+			timeout_val = float(self.timeout)
+			if timeout_val <= 0:
+				self.errors.append("Timeout must be positive. Got: {timeout}".format(timeout=self.timeout))
+				return False
+		except (TypeError, ValueError):
+			self.errors.append("Timeout must be a number. Got: {timeout}".format(timeout=self.timeout))
+			return False
+		return True
+
+	def _validate_retries(self):
+		"""Validate max_retries is a non-negative integer."""
+		if self.max_retries is None:
+			return True
+		try:
+			retries_val = int(self.max_retries)
+			if retries_val < 0:
+				self.errors.append("Max retries must be non-negative. Got: {retries}".format(retries=self.max_retries))
+				return False
+		except (TypeError, ValueError):
+			self.errors.append("Max retries must be an integer. Got: {retries}".format(retries=self.max_retries))
+			return False
+		return True
+
+	def _validate_inputs(self):
+		"""Validate all inputs for security and correctness.
+
+		Returns True if validation passes, False otherwise.
+		Errors are appended to self.errors.
+		"""
+		return (self._validate_url() and
+		        self._validate_method() and
+		        self._validate_timeout() and
+		        self._validate_retries())
 
 	def runQuery(self):
 		# Reset state for new request (preserves ability to inspect after multiple calls)
