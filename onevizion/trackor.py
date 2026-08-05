@@ -322,21 +322,13 @@ class Trackor(object):
 
 		URL += "?"+FilterSection+ViewSection+SortSection+PageSection
 
-		self.errors = []
-		self.jsonData = {}
-		self.OVCall = curl(Method,URL,auth=self.auth,**SearchBody)
-		self.jsonData = self.OVCall.jsonData
-		self.request = self.OVCall.request
-
-		Message(URL,2)
-		Message(json.dumps(SearchBody,indent=2),2)
+		if SearchBody:
+			Message(json.dumps(SearchBody,indent=2),2)
+		self._execute_api_call(Method, URL, extra_data=SearchBody if SearchBody else None, **SearchBody)
 		Message("{TrackorType} read completed in {Duration} seconds.".format(
 			TrackorType=self.TrackorType,
 			Duration=self.OVCall.duration
 			),1)
-		if len(self.OVCall.errors) > 0:
-			self.errors.append(self.OVCall.errors)
-			self.TraceTag = LogErrorToTrace(self.OVCall, URL, post_body=SearchBody)
 
 
 	def update(self, trackorId=None, filters={}, fields={}, parents={}, charset=""):
@@ -384,21 +376,13 @@ class Trackor(object):
 		Headers = {'content-type': 'application/json'}
 		if charset != "":
 			Headers['charset'] = charset
-		self.errors = []
-		self.jsonData = {}
-		self.OVCall = curl('PUT',URL, data=JSON, headers=Headers, auth=self.auth)
-		self.jsonData = self.OVCall.jsonData
-		self.request = self.OVCall.request
 
-		Message(URL,2)
 		Message(json.dumps(JSONObj,indent=2),2)
+		self._execute_api_call('PUT', URL, extra_data=JSONObj, data=JSON, headers=Headers)
 		Message("{TrackorType} update completed in {Duration} seconds.".format(
 			TrackorType=self.TrackorType,
 			Duration=self.OVCall.duration
 			),1)
-		if len(self.OVCall.errors) > 0:
-			self.errors.append(self.OVCall.errors)
-			self.TraceTag = LogErrorToTrace(self.OVCall, URL, post_body=JSONObj)
 
 
 	def create(self,fields={},parents={}, charset=""):
@@ -431,21 +415,13 @@ class Trackor(object):
 		Headers = {'content-type': 'application/json'}
 		if charset != "":
 			Headers['charset'] = charset
-		self.errors = []
-		self.jsonData = {}
-		self.OVCall = curl('POST',URL, data=JSON, headers=Headers, auth=self.auth)
-		self.jsonData = self.OVCall.jsonData
-		self.request = self.OVCall.request
 
-		Message(URL,2)
 		Message(json.dumps(JSONObj,indent=2),2)
+		self._execute_api_call('POST', URL, extra_data=JSONObj, data=JSON, headers=Headers)
 		Message("{TrackorType} create completed in {Duration} seconds.".format(
 			TrackorType=self.TrackorType,
 			Duration=self.OVCall.duration
 			),1)
-		if len(self.OVCall.errors) > 0:
-			self.errors.append(self.OVCall.errors)
-			self.TraceTag = LogErrorToTrace(self.OVCall, URL, post_body=JSONObj)
 
 
 	def assignWorkplan(self, trackorId, workplanTemplate, name=None, isActive=False, startDate=None, finishDate=None):
@@ -483,20 +459,11 @@ class Trackor(object):
 				dt = str(finishDate)
 			URL += "&proj_finish_date="+URLEncode(dt)
 
-		self.errors = []
-		self.jsonData = {}
-		self.OVCall = curl('POST',URL,auth=self.auth)
-		self.jsonData = self.OVCall.jsonData
-		self.request = self.OVCall.request
-
-		Message(URL,2)
+		self._execute_api_call('POST', URL)
 		Message("{TrackorType} assign workplan completed in {Duration} seconds.".format(
 			TrackorType=self.TrackorType,
 			Duration=self.OVCall.duration
 			),1)
-		if len(self.OVCall.errors) > 0:
-			self.errors.append(self.OVCall.errors)
-			self.TraceTag = LogErrorToTrace(self.OVCall, URL)
 
 
 	def GetFile(self, trackorId=None, fieldName=None, blobDataId=None):
@@ -651,18 +618,9 @@ class Trackor(object):
 		URL += "?file_name=" + URLEncode(fileName)
 		File = {'file': (fileName, fileContents)}
 
-		self.errors = []
-		self.jsonData = {}
-		self.OVCall = curl('POST',URL,auth=self.auth,files=File)
-		self.jsonData = self.OVCall.jsonData
-		self.request = self.OVCall.request
-
-		Message(URL,2)
 		Message("FileName: {FileName}".format(FileName=fileName),2)
+		self._execute_api_call('POST', URL, extra_data={"FileName": fileName}, files=File)
 		Message("{TrackorType} upload file completed in {Duration} seconds.".format(
 			TrackorType=self.TrackorType,
 			Duration=self.OVCall.duration
 			),1)
-		if len(self.OVCall.errors) > 0:
-			self.errors.append(self.OVCall.errors)
-			self.TraceTag = LogErrorToTrace(self.OVCall, URL, extra_data={"FileName": fileName})
