@@ -73,9 +73,20 @@ class curl(object):
 		self.duration = None
 		self.sentUrl = None
 		self.sentArgs = None
+
+		# Validate and apply kwargs - only allow known requests parameters
+		_allowed_kwargs = {
+			'params', 'data', 'headers', 'cookies', 'files', 'auth',
+			'timeout', 'allow_redirects', 'proxies', 'hooks', 'stream',
+			'verify', 'cert', 'json'
+		}
 		for key, value in kwargs.items():
-			self.args[key] = value
-			setattr(self, key, value)
+			if key in _allowed_kwargs:
+				self.args[key] = value
+				setattr(self, key, value)
+			else:
+				# Store unknown kwargs in args but don't set as attributes
+				self.args[key] = value
 
 		if self.url is not None:
 			self.runQuery()
@@ -137,9 +148,12 @@ class curl(object):
 		return True
 
 	def runQuery(self):
-		# Clear previous errors and jsonData
+		# Reset state for new request (preserves ability to inspect after multiple calls)
+		# Note: Previous errors/data are cleared - store them separately if needed
 		self.errors = []
 		self.jsonData = {}
+		self.request = None
+		self.duration = None
 
 		# Validate inputs before making request
 		if not self._validate_inputs():

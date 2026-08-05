@@ -182,22 +182,73 @@ class Trackor(object):
 		except Exception:
 			pass
 
+	def _build_fields_section(self, fields):
+		"""Build fields section for API request from fields dict.
+
+		Handles both simple values and compound (dict) field values.
+		Returns dict suitable for JSON serialization.
+		"""
+		fields_section = {}
+		for key, value in fields.items():
+			if isinstance(value, dict):
+				compound_field = {}
+				for skey, svalue in value.items():
+					compound_field[skey] = JSONEndValue(svalue)
+				fields_section[key] = compound_field
+			else:
+				fields_section[key] = JSONEndValue(value)
+		return fields_section
+
+	def _build_parents_section(self, parents):
+		"""Build parents section for API request from parents dict.
+
+		Converts dict of TrackorType: {field: value} to list format.
+		Returns list suitable for JSON serialization.
+		"""
+		parents_section = []
+		for trackor_type, filter_dict in parents.items():
+			parent_obj = {
+				"trackor_type": trackor_type,
+				"filter": {fkey: JSONEndValue(fvalue) for fkey, fvalue in filter_dict.items()}
+			}
+			parents_section.append(parent_obj)
+		return parents_section
+
+	def _execute_api_call(self, method, url, log_level=2, extra_data=None, **curl_kwargs):
+		"""Execute API call with standardized error handling and logging.
+
+		Args:
+			method: HTTP method (GET, POST, PUT, DELETE, etc.)
+			url: Target URL
+			log_level: Message log level (default 2)
+			extra_data: Optional dict of extra data to log on error
+			**curl_kwargs: Additional arguments to pass to curl
+
+		Returns:
+			True if successful (no errors), False otherwise
+		"""
+		self.errors = []
+		self.jsonData = {}
+		self.OVCall = curl(method, url, auth=self.auth, **curl_kwargs)
+		self.jsonData = self.OVCall.jsonData
+		self.request = self.OVCall.request
+
+		Message(url, log_level)
+		if len(self.OVCall.errors) > 0:
+			self.errors.append(self.OVCall.errors)
+			self.TraceTag = LogErrorToTrace(self.OVCall, url, extra_data=extra_data)
+			return False
+		return True
+
 	def delete(self,trackorId):
 		""" Delete a Trackor instance.  Must pass a trackorId, the unique DB number.
 		"""
 		FilterSection = "trackor_id=" + str(trackorId)
+		URL = "{URL}/api/v3/trackor_types/{TrackorType}/trackors?{FilterSection}".format(
+			URL=self.URL, TrackorType=self.TrackorType, FilterSection=FilterSection)
 
-		URL = "{URL}/api/v3/trackor_types/{TrackorType}/trackors?{FilterSection}".format(URL=self.URL, TrackorType=self.TrackorType, FilterSection=FilterSection)
-		self.errors = []
-		self.jsonData = {}
-		self.OVCall = curl('DELETE',URL,auth=self.auth)
-		Message(URL,2)
+		self._execute_api_call('DELETE', URL)
 		Message("Deletes completed in {Duration} seconds.".format(Duration=self.OVCall.duration),1)
-		if len(self.OVCall.errors) > 0:
-			self.errors.append(self.OVCall.errors)
-			self.TraceTag = LogErrorToTrace(self.OVCall, URL)
-		self.jsonData = self.OVCall.jsonData
-		self.request = self.OVCall.request
 
 
 
@@ -301,32 +352,14 @@ class Trackor(object):
 				"Filter" is a list of ConfigFieldName:value exactly like the about "filters"
 		"""
 
-		# First build a JSON package from the fields and parents dictionaries given
+		# Build JSON package from fields and parents
 		JSONObj = {}
+		FieldsSection = self._build_fields_section(fields)
+		ParentsSection = self._build_parents_section(parents)
 
-		FieldsSection = {}
-		for key, value in fields.items():
-			if isinstance(value, dict):
-				CompoundField = {}
-				for skey,svalue in value.items():
-					CompoundField[skey] = JSONEndValue(svalue)
-				FieldsSection[key] = CompoundField
-			else:
-				FieldsSection[key] = JSONEndValue(value)
-
-		ParentsSection = []
-		for key, value in parents.items():
-			Parentx = {}
-			Parentx["trackor_type"] = key
-			FilterPart = {}
-			for fkey,fvalue in value.items():
-				FilterPart[fkey]=JSONEndValue(fvalue)
-			Parentx["filter"] = FilterPart
-			ParentsSection.append(Parentx)
-
-		if len(FieldsSection) > 0:
+		if FieldsSection:
 			JSONObj["fields"] = FieldsSection
-		if len(ParentsSection) > 0:
+		if ParentsSection:
 			JSONObj["parents"] = ParentsSection
 		JSON = json.dumps(JSONObj)
 
@@ -382,32 +415,14 @@ class Trackor(object):
 					with parent fields.
 		"""
 
-		# First build a JSON package from the fields and parents dictionaries given
+		# Build JSON package from fields and parents
 		JSONObj = {}
+		FieldsSection = self._build_fields_section(fields)
+		ParentsSection = self._build_parents_section(parents)
 
-		FieldsSection = {}
-		for key, value in fields.items():
-			if isinstance(value, dict):
-				CompoundField = {}
-				for skey,svalue in value.items():
-					CompoundField[skey] = JSONEndValue(svalue)
-				FieldsSection[key] = CompoundField
-			else:
-				FieldsSection[key] = JSONEndValue(value)
-
-		ParentsSection = []
-		for key, value in parents.items():
-			Parentx = {}
-			Parentx["trackor_type"] = key
-			FilterPart = {}
-			for fkey,fvalue in value.items():
-				FilterPart[fkey]=JSONEndValue(fvalue)
-			Parentx["filter"] = FilterPart
-			ParentsSection.append(Parentx)
-
-		if len(FieldsSection) > 0:
+		if FieldsSection:
 			JSONObj["fields"] = FieldsSection
-		if len(ParentsSection) > 0:
+		if ParentsSection:
 			JSONObj["parents"] = ParentsSection
 		JSON = json.dumps(JSONObj)
 
