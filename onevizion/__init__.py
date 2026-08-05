@@ -43,7 +43,7 @@ Main Classes:
     - WorkPlan: Read and manage workplans
     - Task: Read and update workplan tasks
     - EMail: Send email notifications
-    - Singleton: Ensure single process execution
+    - Singleton: (DEPRECATED) Ensure single process execution - use systemd/supervisor instead
     - curl: Low-level HTTP wrapper with retry/timeout
 
 For more examples, see: https://github.com/Onevizion/api-samples
