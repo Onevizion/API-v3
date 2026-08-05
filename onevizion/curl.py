@@ -27,6 +27,7 @@ Note:
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
+import time
 
 import requests
 
@@ -98,7 +99,7 @@ class curl(object):
 
 		# Validate URL protocol (security: prevent javascript:, file:, data: etc.)
 		url_lower = str(self.url).lower()
-		if not (url_lower.startswith('http://') or url_lower.startswith('https://')):
+		if not url_lower.startswith(('http://', 'https://')):
 			self.errors.append("URL protocol must be http:// or https://. Got: {url}".format(url=self.url))
 			return False
 
@@ -166,7 +167,6 @@ class curl(object):
 
 		# Retry logic for transient failures
 		attempt = 0
-		last_exception = None
 
 		while attempt <= self.max_retries:
 			try:
@@ -181,18 +181,17 @@ class curl(object):
 					# Success - parse JSON and exit
 					try:
 						self.jsonData = json.loads(self.request.text)
-					except Exception as err:
+					except Exception:
 						pass
 					break
-				elif self.request.status_code in range(400, 500):
+				if self.request.status_code in range(400, 500):
 					# 4xx = client error (permanent) - don't retry
 					reason = self.request.reason if self.request.reason else "Unknown"
 					self.errors.append(str(self.request.status_code)+" = "+reason+"\n"+str(self.request.text))
 					break
-				elif self.request.status_code >= 500:
+				if self.request.status_code >= 500:
 					# 5xx = server error (transient) - retry
 					if attempt < self.max_retries:
-						import time
 						# Close failed response before retrying
 						if self.request:
 							self.request.close()
@@ -200,25 +199,21 @@ class curl(object):
 						time.sleep(delay)
 						attempt += 1
 						continue
-					else:
-						# Max retries reached
-						reason = self.request.reason if self.request.reason else "Unknown"
-						self.errors.append(str(self.request.status_code)+" = "+reason+"\n"+str(self.request.text))
-						break
+					# Max retries reached
+					reason = self.request.reason if self.request.reason else "Unknown"
+					self.errors.append(str(self.request.status_code)+" = "+reason+"\n"+str(self.request.text))
+					break
 
 			except (requests.ConnectionError, requests.Timeout) as e:
 				# Network errors (transient) - retry
-				last_exception = e
 				if attempt < self.max_retries:
-					import time
 					delay = self.retry_backoff * (2 ** attempt)
 					time.sleep(delay)
 					attempt += 1
 					continue
-				else:
-					# Max retries reached
-					self.errors.append(str(e))
-					break
+				# Max retries reached
+				self.errors.append(str(e))
+				break
 
 			except Exception as e:
 				# Other errors - don't retry

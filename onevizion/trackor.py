@@ -98,10 +98,8 @@ class Trackor(object):
 			# Check for : before any / (which would indicate a protocol)
 			colon_pos = url_lower.find(':')
 			slash_pos = url_lower.find('/')
-			if colon_pos != -1 and (slash_pos == -1 or colon_pos < slash_pos):
-				# URL has a protocol - ensure it's http or https
-				if not (url_lower.startswith('http://') or url_lower.startswith('https://')):
-					self.errors.append("URL protocol must be http:// or https://. Got: {url}".format(url=self.URL))
+			if colon_pos != -1 and (slash_pos == -1 or colon_pos < slash_pos) and not url_lower.startswith(('http://', 'https://')):
+				self.errors.append("URL protocol must be http:// or https://. Got: {url}".format(url=self.URL))
 
 		self.URL = getUrlContainingScheme(self.URL)
 
@@ -521,13 +519,13 @@ class Trackor(object):
 			if self.request:
 				try:
 					self.request.close()
-				except:
+				except Exception:
 					pass
 			# Clean up atomic temp file on error
 			try:
 				if 'atomicTmpFileName' in locals() and os.path.exists(atomicTmpFileName):
 					os.remove(atomicTmpFileName)
-			except:
+			except Exception:
 				pass
 		else:
 			if self.request.status_code not in range(200,300):
@@ -537,7 +535,7 @@ class Trackor(object):
 				try:
 					if os.path.exists(tmpFileName):
 						os.remove(tmpFileName)
-				except:
+				except Exception:
 					pass
 		after = utcnow()
 		delta = after - before
@@ -556,8 +554,7 @@ class Trackor(object):
 				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.request.status_code),0,TraceTag+"-StatusCode")
 				TraceMessage("Reason: {Reason}".format(Reason=self.request.reason),0,TraceTag+"-Reason")
 				TraceMessage("Body:\n{Body}".format(Body=self.request.text),0,TraceTag+"-Body")
-			except Exception as e:
-				pass
+			except Exception:
 				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.errors,indent=2)),0,TraceTag+"-Errors")
 			onevizion.Config["Error"]=True
 			# Close response before returning on error
