@@ -125,6 +125,63 @@ class Trackor(object):
 			except (TypeError, ValueError):
 				self.errors.append("Max file size must be an integer. Got: {size}".format(size=self.max_file_size))
 
+	def _validate_file_size_from_path(self, file_path):
+		"""Validate file size from path against max_file_size limit.
+
+		Returns True if valid or no limit set, False otherwise.
+		Errors are appended to self.errors.
+		"""
+		if self.max_file_size is None:
+			return True
+		try:
+			file_size = os.path.getsize(file_path)
+			if file_size > self.max_file_size:
+				self.errors.append(
+					"File size ({size} bytes) exceeds maximum allowed size ({max} bytes)".format(
+						size=file_size,
+						max=self.max_file_size
+					)
+				)
+				return False
+			return True
+		except OSError as e:
+			self.errors.append("Cannot determine file size: {err}".format(err=str(e)))
+			return False
+
+	def _validate_file_size_from_headers(self, content_length):
+		"""Validate file size from Content-Length header against max_file_size limit.
+
+		Returns True if valid or no limit set, False otherwise.
+		Errors are appended to self.errors.
+		"""
+		if self.max_file_size is None:
+			return True
+		if content_length > self.max_file_size:
+			self.errors.append(
+				"File size ({size} bytes) exceeds maximum allowed size ({max} bytes)".format(
+					size=content_length,
+					max=self.max_file_size
+				)
+			)
+			return False
+		return True
+
+	def _safe_close_response(self):
+		"""Safely close response, ignoring errors."""
+		if self.request:
+			try:
+				self.request.close()
+			except Exception:
+				pass
+
+	def _safe_remove_file(self, file_path):
+		"""Safely remove file, ignoring errors."""
+		try:
+			if os.path.exists(file_path):
+				os.remove(file_path)
+		except Exception:
+			pass
+
 	def delete(self,trackorId):
 		""" Delete a Trackor instance.  Must pass a trackorId, the unique DB number.
 		"""
@@ -484,18 +541,10 @@ class Trackor(object):
 			self.request = requests.get(URL, stream=True, auth=self.auth, allow_redirects=True, timeout=300.0)
 
 			# Validate file size if limit is set and Content-Length is available
-			if self.max_file_size is not None and 'content-length' in self.request.headers:
+			if 'content-length' in self.request.headers:
 				content_length = int(self.request.headers['content-length'])
-				if content_length > self.max_file_size:
-					self.errors.append(
-						"File size ({size} bytes) exceeds maximum allowed size ({max} bytes)".format(
-							size=content_length,
-							max=self.max_file_size
-						)
-					)
-					# Close response before returning
-					if self.request:
-						self.request.close()
+				if not self._validate_file_size_from_headers(content_length):
+					self._safe_close_response()
 					return None
 
 			# Use atomic write: write to .tmp first, rename on success
@@ -515,28 +564,15 @@ class Trackor(object):
 
 		except Exception as e:
 			self.errors.append(str(e))
-			# Close response if it was created
-			if self.request:
-				try:
-					self.request.close()
-				except Exception:
-					pass
+			self._safe_close_response()
 			# Clean up atomic temp file on error
-			try:
-				if 'atomicTmpFileName' in locals() and os.path.exists(atomicTmpFileName):
-					os.remove(atomicTmpFileName)
-			except Exception:
-				pass
+			if 'atomicTmpFileName' in locals():
+				self._safe_remove_file(atomicTmpFileName)
 		else:
 			if self.request.status_code not in range(200,300):
 				reason = self.request.reason if self.request.reason else "Unknown"
 				self.errors.append(str(self.request.status_code)+" = "+reason)
-				# Clean up temp file on HTTP error
-				try:
-					if os.path.exists(tmpFileName):
-						os.remove(tmpFileName)
-				except Exception:
-					pass
+				self._safe_remove_file(tmpFileName)
 		after = utcnow()
 		delta = after - before
 		self.duration = delta.total_seconds()
@@ -590,20 +626,8 @@ class Trackor(object):
 		FileName = newFileName if newFileName else os.path.basename(FilePath)
 
 		# Validate file size if limit is set
-		if self.max_file_size is not None:
-			try:
-				file_size = os.path.getsize(FilePath)
-				if file_size > self.max_file_size:
-					self.errors.append(
-						"File size ({size} bytes) exceeds maximum allowed size ({max} bytes)".format(
-							size=file_size,
-							max=self.max_file_size
-						)
-					)
-					return
-			except OSError as e:
-				self.errors.append("Cannot determine file size: {err}".format(err=str(e)))
-				return
+		if not self._validate_file_size_from_path(FilePath):
+			return
 
 		Message("FilePath: {FilePath}".format(FilePath=FilePath),2)
 

@@ -146,20 +146,11 @@ class curl(object):
 			# Validation failed, errors already set
 			return
 
-		self.setArg('params', self.params)
-		self.setArg('data', self.data)
-		self.setArg('headers', self.headers)
-		self.setArg('cookies', self.cookies)
-		self.setArg('files', self.files)
-		self.setArg('auth', self.auth)
-		self.setArg('timeout', self.timeout)
-		self.setArg('allow_redirects', self.allow_redirects)
-		self.setArg('proxies', self.proxies)
-		self.setArg('hooks', self.hooks)
-		self.setArg('stream', self.stream)
-		self.setArg('verify', self.verify)
-		self.setArg('cert', self.cert)
-		self.setArg('json', self.json)
+		# Build args dictionary from instance attributes
+		for attr in ('params', 'data', 'headers', 'cookies', 'files', 'auth',
+		             'timeout', 'allow_redirects', 'proxies', 'hooks', 'stream',
+		             'verify', 'cert', 'json'):
+			self.setArg(attr, getattr(self, attr))
 
 		self.sentUrl = self.url
 		self.sentArgs = self.args
@@ -171,10 +162,8 @@ class curl(object):
 		while attempt <= self.max_retries:
 			try:
 				# Use session if provided, otherwise use requests module
-				if self.session:
-					self.request = self.session.request(self.method, self.url, **self.args)
-				else:
-					self.request = requests.request(self.method, self.url, **self.args)
+				requester = self.session if self.session else requests
+				self.request = requester.request(self.method, self.url, **self.args)
 
 				# Check if response indicates success or permanent failure
 				if self.request.status_code in range(200, 300):
@@ -186,8 +175,7 @@ class curl(object):
 					break
 				if self.request.status_code in range(400, 500):
 					# 4xx = client error (permanent) - don't retry
-					reason = self.request.reason if self.request.reason else "Unknown"
-					self.errors.append(str(self.request.status_code)+" = "+reason+"\n"+str(self.request.text))
+					self._append_http_error()
 					break
 				if self.request.status_code >= 500:
 					# 5xx = server error (transient) - retry
@@ -195,20 +183,17 @@ class curl(object):
 						# Close failed response before retrying
 						if self.request:
 							self.request.close()
-						delay = self.retry_backoff * (2 ** attempt)  # Exponential backoff
-						time.sleep(delay)
+						self._sleep_with_backoff(attempt)
 						attempt += 1
 						continue
 					# Max retries reached
-					reason = self.request.reason if self.request.reason else "Unknown"
-					self.errors.append(str(self.request.status_code)+" = "+reason+"\n"+str(self.request.text))
+					self._append_http_error()
 					break
 
 			except (requests.ConnectionError, requests.Timeout) as e:
 				# Network errors (transient) - retry
 				if attempt < self.max_retries:
-					delay = self.retry_backoff * (2 ** attempt)
-					time.sleep(delay)
+					self._sleep_with_backoff(attempt)
 					attempt += 1
 					continue
 				# Max retries reached
@@ -229,4 +214,14 @@ class curl(object):
 		# Close the final response to free connection resources
 		if self.request:
 			self.request.close()
+
+	def _append_http_error(self):
+		"""Append HTTP error message from response."""
+		reason = self.request.reason if self.request.reason else "Unknown"
+		self.errors.append(str(self.request.status_code)+" = "+reason+"\n"+str(self.request.text))
+
+	def _sleep_with_backoff(self, attempt):
+		"""Sleep with exponential backoff."""
+		delay = self.retry_backoff * (2 ** attempt)
+		time.sleep(delay)
 
