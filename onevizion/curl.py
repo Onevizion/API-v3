@@ -173,6 +173,11 @@ class curl(object):
 					except Exception:
 						pass
 					break
+				if self.request.status_code in range(300, 400):
+					# 3xx redirect - either handled by requests or error if allow_redirects=False
+					# Treat as permanent failure (should have been auto-handled)
+					self._append_http_error()
+					break
 				if self.request.status_code in range(400, 500):
 					# 4xx = client error (permanent) - don't retry
 					self._append_http_error()
@@ -204,8 +209,6 @@ class curl(object):
 				# Other errors - don't retry
 				self.errors.append(str(e))
 				break
-
-			attempt += 1
 
 		after = utcnow()
 		delta = after - before

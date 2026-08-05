@@ -509,29 +509,32 @@ class Trackor(object):
 		self.errors = []
 		self.jsonData = {}
 
-		# check parameters and set URL
-		if trackorId and fieldName:
-			URL = "{Website}/api/v3/trackor/{TrackorID}/file/{ConfigFieldName}".format(
-					Website=self.URL,
-					TrackorID=trackorId,
-					ConfigFieldName=fieldName
+		# Validate and check parameters
+		try:
+			if trackorId and fieldName:
+				URL = "{Website}/api/v3/trackor/{TrackorID}/file/{ConfigFieldName}".format(
+						Website=self.URL,
+						TrackorID=str(trackorId),
+						ConfigFieldName=str(fieldName)
+						)
+				tmpFileName = str(trackorId)+str(fieldName)+".tmp"
+			elif blobDataId:
+				URL = "{Website}/api/v3/files/{BlobDataID}".format(
+						Website=self.URL,
+						BlobDataID=str(blobDataId)
+						)
+				tmpFileName = str(blobDataId)+".tmp"
+			else:
+				self.errors.append(
+					"Invalid parameters for GetFile. "
+					"Must provide either (trackorId AND fieldName) or (blobDataId). "
+					"Got: trackorId={}, fieldName={}, blobDataId={}".format(
+						repr(trackorId), repr(fieldName), repr(blobDataId)
 					)
-			tmpFileName = str(trackorId)+fieldName+".tmp"
-		elif blobDataId:
-			URL = "{Website}/api/v3/files/{BlobDataID}".format(
-					Website=self.URL,
-					BlobDataID=blobDataId
-					)
-			tmpFileName = str(blobDataId)+".tmp"
-		else:
-			error_msg = (
-				"Invalid parameters for GetFile. "
-				"Must provide either (trackorId AND fieldName) or (blobDataId). "
-				"Got: trackorId={}, fieldName={}, blobDataId={}".format(
-					trackorId, fieldName, blobDataId
 				)
-			)
-			self.errors.append(error_msg)
+				return None
+		except (TypeError, ValueError) as e:
+			self.errors.append("Invalid parameter types for GetFile: {}".format(str(e)))
 			return None
 
 		before = utcnow()
@@ -581,22 +584,14 @@ class Trackor(object):
 			except Exception:
 				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.errors,indent=2)),0,TraceTag+"-Errors")
 			onevizion.Config["Error"]=True
-			# Close response before returning on error
-			if self.request:
-				self.request.close()
 			return None  # Return None on error
 
-		# return the name of the fiel that was downloaded.
+		# return the name of the file that was downloaded
 		if self.request and hasattr(self.request, 'headers'):
 			newFileName = get_filename_from_cd(self.request.headers.get('content-disposition'))
 			if newFileName is not None and len(newFileName) > 0:
 				os.rename(tmpFileName,newFileName)
-				# Close response before returning
-				self.request.close()
 				return newFileName
-		# Close response before returning
-		if self.request:
-			self.request.close()
 		return tmpFileName
 
 
