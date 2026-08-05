@@ -4,7 +4,6 @@ on:
   push:
     branches: [ master, develop ]
   pull_request:
-    branches: [ master, develop ]
 
 # Cancel in-progress runs when a new workflow with the same group name is triggered
 concurrency:
@@ -139,11 +138,55 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv tool run ruff check onevizion/ tests/
 
+  check-deps:
+    name: Validate requirements files consistency
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check package names match between files
+        run: |
+          # Extract package names from pyproject.toml dev dependencies
+          pyproject_packages=$(grep -A 20 '\[project.optional-dependencies\]' pyproject.toml | \
+            grep -E '^\s+"[a-z0-9-]+(>=|<|==)' | \
+            sed -E 's/^\s+"([a-z0-9-]+).*/\1/' | \
+            sort -u)
+
+          # Extract package names from requirements-dev.txt
+          reqdev_packages=$(grep -v '^#' requirements-dev.txt | \
+            grep -v '^$' | \
+            sed -E 's/^([a-z0-9-]+).*/\1/' | \
+            grep -v '^requests$' | \
+            sort -u)
+
+          echo "Packages in pyproject.toml dev:"
+          echo "$pyproject_packages"
+          echo ""
+          echo "Packages in requirements-dev.txt:"
+          echo "$reqdev_packages"
+          echo ""
+
+          # Basic check - all pyproject packages should exist in requirements-dev
+          missing=""
+          for pkg in $pyproject_packages; do
+            if ! echo "$reqdev_packages" | grep -q "^${pkg}$"; then
+              missing="${missing}${pkg} "
+            fi
+          done
+
+          if [ -n "$missing" ]; then
+            echo "Missing packages in requirements-dev.txt: $missing"
+            exit 1
+          fi
+
+          echo "Package names are consistent"
+
   # Summary job that all checks must pass
   check:
     name: All Tests Passed
     if: always()
-    needs: [test, lint]
+    needs: [test, lint, check-deps]
     runs-on: ubuntu-latest
 
     steps:
@@ -155,5 +198,9 @@ jobs:
         if: needs.lint.result != 'success'
         run: exit 1
 
+      - name: Check deps sync status
+        if: needs.check-deps.result != 'success'
+        run: exit 1
+
       - name: All checks passed
-        run: echo "✅ All tests and lint checks passed!"
+        run: echo "All tests, lint checks, and dependency validation passed"

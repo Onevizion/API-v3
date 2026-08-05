@@ -70,7 +70,7 @@ class Trackor(object):
 		jsonData: the json data converted to python array
 	"""
 
-	def __init__(self, trackorType = "", URL = "", userName="", password="", paramToken=None, isTokenAuth=False):
+	def __init__(self, trackorType = "", URL = "", userName="", password="", paramToken=None, isTokenAuth=False, max_file_size=None):
 		self.TrackorType = trackorType
 		self.URL = URL
 		self.userName = userName
@@ -79,6 +79,7 @@ class Trackor(object):
 		self.jsonData = {}
 		self.OVCall = curl()
 		self.request = None
+		self.max_file_size = max_file_size  # Optional max file size in bytes (None = no limit)
 
 		if paramToken is not None:
 			if self.URL == "":
@@ -90,12 +91,41 @@ class Trackor(object):
 			if 'isTokenAuth' in onevizion.Config["ParameterData"][paramToken]:
 				isTokenAuth = onevizion.Config["ParameterData"][paramToken]['isTokenAuth']
 
+		# Validate URL protocol before transformation (security check)
+		if self.URL:
+			url_lower = str(self.URL).lower()
+			# If URL already has a protocol, ensure it's http or https
+			# Check for : before any / (which would indicate a protocol)
+			colon_pos = url_lower.find(':')
+			slash_pos = url_lower.find('/')
+			if colon_pos != -1 and (slash_pos == -1 or colon_pos < slash_pos):
+				# URL has a protocol - ensure it's http or https
+				if not (url_lower.startswith('http://') or url_lower.startswith('https://')):
+					self.errors.append("URL protocol must be http:// or https://. Got: {url}".format(url=self.URL))
+
 		self.URL = getUrlContainingScheme(self.URL)
 
 		if isTokenAuth:
 			self.auth = HTTPBearerAuth(self.userName, self.password)
 		else:
 			self.auth = requests.auth.HTTPBasicAuth(self.userName, self.password)
+
+		# Validate other inputs
+		self._validate_inputs()
+
+	def _validate_inputs(self):
+		"""Validate inputs for security and correctness.
+
+		Errors are appended to self.errors.
+		"""
+		# Validate max_file_size (must be positive or None)
+		if self.max_file_size is not None:
+			try:
+				size_val = int(self.max_file_size)
+				if size_val <= 0:
+					self.errors.append("Max file size must be positive. Got: {size}".format(size=self.max_file_size))
+			except (TypeError, ValueError):
+				self.errors.append("Max file size must be an integer. Got: {size}".format(size=self.max_file_size))
 
 	def delete(self,trackorId):
 		""" Delete a Trackor instance.  Must pass a trackorId, the unique DB number.
@@ -452,17 +482,63 @@ class Trackor(object):
 		before = utcnow()
 		try:
 			# NOTE the stream=True parameter
+
 			self.request = requests.get(URL, stream=True, auth=self.auth, allow_redirects=True, timeout=300.0)
-			with open(tmpFileName, 'wb') as f:
+
+			# Validate file size if limit is set and Content-Length is available
+			if self.max_file_size is not None and 'content-length' in self.request.headers:
+				content_length = int(self.request.headers['content-length'])
+				if content_length > self.max_file_size:
+					self.errors.append(
+						"File size ({size} bytes) exceeds maximum allowed size ({max} bytes)".format(
+							size=content_length,
+							max=self.max_file_size
+						)
+					)
+					# Close response before returning
+					if self.request:
+						self.request.close()
+					return None
+
+			# Use atomic write: write to .tmp first, rename on success
+			atomicTmpFileName = tmpFileName + ".download"
+			with open(atomicTmpFileName, 'wb') as f:
 				for chunk in self.request.iter_content(chunk_size=1024):
 					if chunk: # filter out keep-alive new chunks
 						f.write(chunk)
 						#f.flush() commented by recommendation from J.F.Sebastian
+
+			# Rename atomic temp to regular temp name on successful download
+			try:
+				os.rename(atomicTmpFileName, tmpFileName)
+			except OSError:
+				# If rename fails (e.g., in tests), use the atomic tmp file directly
+				tmpFileName = atomicTmpFileName
+
 		except Exception as e:
 			self.errors.append(str(e))
+			# Close response if it was created
+			if self.request:
+				try:
+					self.request.close()
+				except:
+					pass
+			# Clean up atomic temp file on error
+			try:
+				if 'atomicTmpFileName' in locals() and os.path.exists(atomicTmpFileName):
+					os.remove(atomicTmpFileName)
+			except:
+				pass
 		else:
 			if self.request.status_code not in range(200,300):
-				self.errors.append(str(self.request.status_code)+" = "+self.request.reason)
+				reason = self.request.reason if self.request.reason else "Unknown"
+				self.errors.append(str(self.request.status_code)+" = "+reason)
+				# Clean up temp file on HTTP error
+				try:
+					if os.path.exists(tmpFileName):
+						os.remove(tmpFileName)
+				except:
+					pass
 		after = utcnow()
 		delta = after - before
 		self.duration = delta.total_seconds()
@@ -473,18 +549,33 @@ class Trackor(object):
 			Duration=self.duration
 			),1)
 		if len(self.errors) > 0:
-			# Note: GetFile uses self.request instead of self.OVCall, so create a mock object
-			class MockOVCall:
-				def __init__(self, request, errors):
-					self.request = request
-					self.errors = errors
-			self.TraceTag = LogErrorToTrace(MockOVCall(self.request, self.errors), URL)
+			TraceTag="{TimeStamp}:".format(TimeStamp=utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
+			self.TraceTag = TraceTag
+			onevizion.Config["Trace"][TraceTag+"-URL"] = URL
+			try:
+				TraceMessage("Status Code: {StatusCode}".format(StatusCode=self.request.status_code),0,TraceTag+"-StatusCode")
+				TraceMessage("Reason: {Reason}".format(Reason=self.request.reason),0,TraceTag+"-Reason")
+				TraceMessage("Body:\n{Body}".format(Body=self.request.text),0,TraceTag+"-Body")
+			except Exception as e:
+				pass
+				TraceMessage("Errors:\n{Errors}".format(Errors=json.dumps(self.errors,indent=2)),0,TraceTag+"-Errors")
+			onevizion.Config["Error"]=True
+			# Close response before returning on error
+			if self.request:
+				self.request.close()
+			return None  # Return None on error
 
 		# return the name of the fiel that was downloaded.
-		newFileName = get_filename_from_cd(self.request.headers.get('content-disposition'))
-		if newFileName is not None and len(newFileName) > 0:
-			os.rename(tmpFileName,newFileName)
-			return newFileName
+		if self.request and hasattr(self.request, 'headers'):
+			newFileName = get_filename_from_cd(self.request.headers.get('content-disposition'))
+			if newFileName is not None and len(newFileName) > 0:
+				os.rename(tmpFileName,newFileName)
+				# Close response before returning
+				self.request.close()
+				return newFileName
+		# Close response before returning
+		if self.request:
+			self.request.close()
 		return tmpFileName
 
 
@@ -500,6 +591,22 @@ class Trackor(object):
 
 		FilePath = fileName
 		FileName = newFileName if newFileName else os.path.basename(FilePath)
+
+		# Validate file size if limit is set
+		if self.max_file_size is not None:
+			try:
+				file_size = os.path.getsize(FilePath)
+				if file_size > self.max_file_size:
+					self.errors.append(
+						"File size ({size} bytes) exceeds maximum allowed size ({max} bytes)".format(
+							size=file_size,
+							max=self.max_file_size
+						)
+					)
+					return
+			except OSError as e:
+				self.errors.append("Cannot determine file size: {err}".format(err=str(e)))
+				return
 
 		Message("FilePath: {FilePath}".format(FilePath=FilePath),2)
 
