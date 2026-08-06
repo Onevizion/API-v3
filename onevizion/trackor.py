@@ -240,6 +240,18 @@ class Trackor(object):
 			return False
 		return True
 
+	def _log_completion(self, operation):
+		"""Log operation completion with duration.
+
+		Args:
+			operation: Name of the operation (e.g., "read", "update", "delete")
+		"""
+		Message("{TrackorType} {operation} completed in {Duration} seconds.".format(
+			TrackorType=self.TrackorType,
+			operation=operation,
+			Duration=self.OVCall.duration
+		), 1)
+
 	def delete(self,trackorId):
 		""" Delete a Trackor instance.  Must pass a trackorId, the unique DB number.
 		"""
@@ -248,7 +260,7 @@ class Trackor(object):
 			URL=self.URL, TrackorType=self.TrackorType, FilterSection=FilterSection)
 
 		self._execute_api_call('DELETE', URL)
-		Message("Deletes completed in {Duration} seconds.".format(Duration=self.OVCall.duration),1)
+		self._log_completion("delete")
 
 
 
@@ -325,10 +337,7 @@ class Trackor(object):
 		if SearchBody:
 			Message(json.dumps(SearchBody,indent=2),2)
 		self._execute_api_call(Method, URL, extra_data=SearchBody if SearchBody else None, **SearchBody)
-		Message("{TrackorType} read completed in {Duration} seconds.".format(
-			TrackorType=self.TrackorType,
-			Duration=self.OVCall.duration
-			),1)
+		self._log_completion("read")
 
 
 	def update(self, trackorId=None, filters={}, fields={}, parents={}, charset=""):
@@ -379,10 +388,7 @@ class Trackor(object):
 
 		Message(json.dumps(JSONObj,indent=2),2)
 		self._execute_api_call('PUT', URL, extra_data=JSONObj, data=JSON, headers=Headers)
-		Message("{TrackorType} update completed in {Duration} seconds.".format(
-			TrackorType=self.TrackorType,
-			Duration=self.OVCall.duration
-			),1)
+		self._log_completion("update")
 
 
 	def create(self,fields={},parents={}, charset=""):
@@ -418,10 +424,7 @@ class Trackor(object):
 
 		Message(json.dumps(JSONObj,indent=2),2)
 		self._execute_api_call('POST', URL, extra_data=JSONObj, data=JSON, headers=Headers)
-		Message("{TrackorType} create completed in {Duration} seconds.".format(
-			TrackorType=self.TrackorType,
-			Duration=self.OVCall.duration
-			),1)
+		self._log_completion("create")
 
 
 	def assignWorkplan(self, trackorId, workplanTemplate, name=None, isActive=False, startDate=None, finishDate=None):
@@ -460,10 +463,7 @@ class Trackor(object):
 			URL += "&proj_finish_date="+URLEncode(dt)
 
 		self._execute_api_call('POST', URL)
-		Message("{TrackorType} assign workplan completed in {Duration} seconds.".format(
-			TrackorType=self.TrackorType,
-			Duration=self.OVCall.duration
-			),1)
+		self._log_completion("assign workplan")
 
 
 	def GetFile(self, trackorId=None, fieldName=None, blobDataId=None):
@@ -554,7 +554,7 @@ class Trackor(object):
 		Message("{TrackorType} get file completed in {Duration} seconds.".format(
 			TrackorType=self.TrackorType,
 			Duration=self.duration
-			),1)
+		),1)
 		if len(self.errors) > 0:
 			TraceTag="{TimeStamp}:".format(TimeStamp=utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'))
 			self.TraceTag = TraceTag
@@ -620,7 +620,4 @@ class Trackor(object):
 
 		Message("FileName: {FileName}".format(FileName=fileName),2)
 		self._execute_api_call('POST', URL, extra_data={"FileName": fileName}, files=File)
-		Message("{TrackorType} upload file completed in {Duration} seconds.".format(
-			TrackorType=self.TrackorType,
-			Duration=self.OVCall.duration
-			),1)
+		self._log_completion("upload file")
