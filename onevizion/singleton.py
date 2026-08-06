@@ -102,7 +102,6 @@ class Singleton(object):
 					fcntl.lockf(self.LockFile, fcntl.LOCK_UN)
 				except (ImportError, NameError):
 					pass  # fcntl not available (e.g., during testing or on Windows)
-				# os.close(self.fp)
 				if os.path.isfile(self.LockFileName):
 					os.unlink(self.LockFileName)
 		except Exception as e:
