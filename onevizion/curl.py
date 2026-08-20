@@ -24,7 +24,7 @@ Note:
     than curl directly. This class is primarily for internal use and advanced
     custom integrations.
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 import json
 import time
@@ -220,6 +220,9 @@ class curl(object):
 					# Max retries reached
 					self._append_http_error()
 					break
+				# Any other status (e.g. 1xx) - permanent, don't retry
+				self._append_http_error()
+				break
 
 			except (requests.ConnectionError, requests.Timeout) as e:
 				# Network errors (transient) - retry

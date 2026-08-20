@@ -42,7 +42,7 @@ For parameter-based authentication:
     >>> onevizion.Config["ParameterData"] = {...}  # Load from JSON file
     >>> t = Trackor(trackorType="PROJECT", paramToken="my.onevizion.com")
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 import json
 from datetime import datetime

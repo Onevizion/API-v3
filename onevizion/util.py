@@ -28,7 +28,7 @@ Example:
     >>> onevizion.Config["Verbosity"] = 2
     >>> Message("Debug info", Level=2)  # Prints if Verbosity >= 2
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 import base64
 import json
