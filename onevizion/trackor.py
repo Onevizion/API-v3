@@ -214,13 +214,14 @@ class Trackor(object):
 			parents_section.append(parent_obj)
 		return parents_section
 
-	def _execute_api_call(self, method, url, log_level=2, extra_data=None, **curl_kwargs):
+	def _execute_api_call(self, method, url, log_level=2, post_body=None, extra_data=None, **curl_kwargs):
 		"""Execute API call with standardized error handling and logging.
 
 		Args:
 			method: HTTP method (GET, POST, PUT, DELETE, etc.)
 			url: Target URL
 			log_level: Message log level (default 2)
+			post_body: Optional JSON-serialized request body for error traces
 			extra_data: Optional dict of extra data to log on error
 			**curl_kwargs: Additional arguments to pass to curl
 
@@ -236,7 +237,7 @@ class Trackor(object):
 		Message(url, log_level)
 		if len(self.OVCall.errors) > 0:
 			self.errors.append(self.OVCall.errors)
-			self.TraceTag = LogErrorToTrace(self.OVCall, url, extra_data=extra_data)
+			self.TraceTag = LogErrorToTrace(self.OVCall, url, post_body=post_body, extra_data=extra_data)
 			return False
 		return True
 
@@ -336,7 +337,12 @@ class Trackor(object):
 
 		if SearchBody:
 			Message(json.dumps(SearchBody,indent=2),2)
-		self._execute_api_call(Method, URL, extra_data=SearchBody if SearchBody else None, **SearchBody)
+		self._execute_api_call(
+			Method, URL,
+			post_body=json.dumps(SearchBody, indent=2) if SearchBody else "{}",
+			extra_data=SearchBody if SearchBody else None,
+			**SearchBody
+		)
 		self._log_completion("read")
 
 
@@ -386,8 +392,16 @@ class Trackor(object):
 		if charset != "":
 			Headers['charset'] = charset
 
-		Message(json.dumps(JSONObj,indent=2),2)
-		self._execute_api_call('PUT', URL, extra_data=JSONObj, data=JSON, headers=Headers)
+		# Determine what to log - if using trackorId, actual payload is FieldsSection
+		log_body = FieldsSection if trackorId is not None else JSONObj
+		Message(json.dumps(log_body,indent=2),2)
+		self._execute_api_call(
+			'PUT', URL,
+			post_body=json.dumps(log_body, indent=2),
+			extra_data=log_body,
+			data=JSON,
+			headers=Headers
+		)
 		self._log_completion("update")
 
 
@@ -423,7 +437,13 @@ class Trackor(object):
 			Headers['charset'] = charset
 
 		Message(json.dumps(JSONObj,indent=2),2)
-		self._execute_api_call('POST', URL, extra_data=JSONObj, data=JSON, headers=Headers)
+		self._execute_api_call(
+			'POST', URL,
+			post_body=json.dumps(JSONObj, indent=2),
+			extra_data=JSONObj,
+			data=JSON,
+			headers=Headers
+		)
 		self._log_completion("create")
 
 
