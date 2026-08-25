@@ -221,8 +221,12 @@ class Trackor(object):
 			method: HTTP method (GET, POST, PUT, DELETE, etc.)
 			url: Target URL
 			log_level: Message log level (default 2)
-			post_body: Optional JSON-serialized request body for error traces
-			extra_data: Optional dict of extra data to log on error
+			post_body: Optional request body object for error traces (serialized by
+				LogErrorToTrace - do not pre-serialize, or it will be double-encoded)
+			extra_data: Optional dict of extra data to log on error. Each key becomes
+				its own trace entry, so never pass a request payload here - a field
+				named URL/PostBody/StatusCode/Reason/Body would overwrite the
+				trace's own entry. Use post_body for payloads.
 			**curl_kwargs: Additional arguments to pass to curl
 
 		Returns:
@@ -339,8 +343,7 @@ class Trackor(object):
 			Message(json.dumps(SearchBody,indent=2),2)
 		self._execute_api_call(
 			Method, URL,
-			post_body=json.dumps(SearchBody, indent=2) if SearchBody else "{}",
-			extra_data=SearchBody if SearchBody else None,
+			post_body=SearchBody,
 			**SearchBody
 		)
 		self._log_completion("read")
@@ -397,8 +400,7 @@ class Trackor(object):
 		Message(json.dumps(log_body,indent=2),2)
 		self._execute_api_call(
 			'PUT', URL,
-			post_body=json.dumps(log_body, indent=2),
-			extra_data=log_body,
+			post_body=log_body,
 			data=JSON,
 			headers=Headers
 		)
@@ -439,8 +441,7 @@ class Trackor(object):
 		Message(json.dumps(JSONObj,indent=2),2)
 		self._execute_api_call(
 			'POST', URL,
-			post_body=json.dumps(JSONObj, indent=2),
-			extra_data=JSONObj,
+			post_body=JSONObj,
 			data=JSON,
 			headers=Headers
 		)

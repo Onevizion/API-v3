@@ -503,6 +503,22 @@ class TestTrackorAssignWorkplan(object):
         assert t.errors == []
 
     @mock.patch("onevizion.trackor.curl")
+    def test_assign_workplan_encodes_template_name(self, mock_curl_cls):
+        """Template names with spaces or & must be percent-encoded.
+
+        Regression test for trackor.py:444. workplanTemplate was interpolated
+        raw, so "R&D Template" produced a malformed query string. Every other
+        test in this class passes "Default", which has nothing to encode, so
+        removing URLEncode() would leave them all green.
+        """
+        mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 11})
+        t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
+        t.assignWorkplan(trackorId=10, workplanTemplate="R&D Template")
+        call_url = mock_curl_cls.call_args[0][1]
+        assert "workplan_template=R%26D+Template" in call_url
+        assert "R&D Template" not in call_url
+
+    @mock.patch("onevizion.trackor.curl")
     def test_assign_workplan_with_name(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data={"wp_id": 6})
         t = Trackor(trackorType="Project", URL="https://test.onevizion.com", userName="u", password="p")
