@@ -508,6 +508,24 @@ class TestImportGetProcessData(object):
         assert "owner=" in call_url
 
     @mock.patch.object(_ov_Import_module, 'curl')
+    def test_get_process_data_is_pdf_uses_its_own_argument(self, mock_curl_cls):
+        """is_pdf must carry isPdf, not comments.
+
+        Regression test for Import.py:183. The call was
+        addParam('is_pdf', comments), so isPdf was silently ignored and the
+        comments value landed in the is_pdf query parameter. Passing both
+        arguments with different values is what separates them.
+        """
+        mock_curl_cls.return_value = make_mock_curl(json_data=[])
+        imp = Import(URL="https://test.onevizion.com", userName="u", password="p")
+        imp.processId = 1
+        imp.getProcessData(comments="nightly run", isPdf=True)
+        call_url = mock_curl_cls.call_args[0][1]
+        assert "is_pdf=True" in call_url
+        assert "comments=nightly+run" in call_url
+        assert "is_pdf=nightly" not in call_url
+
+    @mock.patch.object(_ov_Import_module, 'curl')
     def test_get_process_data_with_status_list(self, mock_curl_cls):
         mock_curl_cls.return_value = make_mock_curl(json_data=[])
         imp = Import(URL="https://test.onevizion.com", userName="u", password="p")
