@@ -1,19 +1,22 @@
 """Tests for onevizion.singleton module."""
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pytest
-import sys
+
 import os
+import sys
+
+import pytest
 
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
-    from unittest import mock
     from importlib import reload
+    from unittest import mock
 else:
     import mock
     reload = reload  # reload is a builtin in Python 2
 
 import fcntl
+
 import onevizion
 from onevizion.singleton import Singleton
 

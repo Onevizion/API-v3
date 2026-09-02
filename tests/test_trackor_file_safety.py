@@ -6,10 +6,11 @@ Tests demonstrate:
 """
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import sys
+
 import os
-import tempfile
 import shutil
+import sys
+import tempfile
 
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:

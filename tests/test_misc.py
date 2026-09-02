@@ -2,10 +2,12 @@
 NotifQueue, NotifQueueRecord, NotificationService, LogLevel."""
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pytest
-import sys
+
 import json
+import sys
 import warnings
+
+import pytest
 
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
@@ -14,13 +16,10 @@ else:
     import mock
 
 import requests
-import onevizion.ovimport
-import onevizion.module.log
-import onevizion.notif.queue
-import onevizion.notif.service
-from onevizion.ovimport import OVImport
-from onevizion.module.log import ModuleLog, IntegrationLog
+
+from onevizion.module.log import IntegrationLog, ModuleLog
 from onevizion.module.loglevel import LogLevel
+from onevizion.ovimport import OVImport
 
 
 def make_mock_curl(status_code=200, json_data=None, errors=None, duration=0.1):
@@ -62,7 +61,8 @@ class TestOVImport(object):
 
     @mock.patch("onevizion.ovimport.Import")
     def test_make_call_success(self, mock_import_cls):
-        import tempfile, os
+        import os
+        import tempfile
         mock_import_inst = mock.MagicMock()
         mock_import_inst.errors = []
         mock_import_inst.request = mock.MagicMock()
@@ -88,7 +88,8 @@ class TestOVImport(object):
 
     @mock.patch("onevizion.ovimport.Import")
     def test_make_call_with_errors(self, mock_import_cls):
-        import tempfile, os
+        import os
+        import tempfile
         mock_import_inst = mock.MagicMock()
         mock_import_inst.errors = ["Import failed"]
         mock_import_cls.return_value = mock_import_inst
@@ -468,7 +469,6 @@ if sys.version_info[0] >= 3:
         """Test NotifQueueStatus enum."""
 
         def test_status_enum_values_exist(self):
-            from onevizion.notif.queuestatus import NotifQueueStatus
             # Just verify the enum is importable and has expected members
             assert hasattr(NotifQueueStatus, "SUCCESS")
             assert hasattr(NotifQueueStatus, "FAIL")

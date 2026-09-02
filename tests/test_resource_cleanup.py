@@ -7,12 +7,14 @@ Tests demonstrate:
 """
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+
 import os
+import shutil
 import sys
 import tempfile
-import shutil
-import responses
+
 import pytest
+import responses
 
 from onevizion.curl import curl
 from onevizion.trackor import Trackor

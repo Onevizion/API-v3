@@ -1,10 +1,10 @@
 """Tests for onevizion.Import module."""
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pytest
-import sys
-import os
+
 import json
+import os
+import sys
 import tempfile
 
 # Python 2/3 compatibility
@@ -12,9 +12,6 @@ if sys.version_info[0] >= 3:
     from unittest import mock
 else:
     import mock
-
-import onevizion.Import
-from onevizion.Import import Import
 
 # Grab the onevizion.Import MODULE object directly from sys.modules so that
 # mock.patch.object can patch the 'curl' name in that module's namespace.
@@ -26,6 +23,9 @@ from onevizion.Import import Import
 # pkgutil.resolve_name which correctly resolves the module.  Using sys.modules gives us
 # the module object directly and works across all Python versions.
 import sys as _sys
+
+from onevizion.Import import Import
+
 _ov_Import_module = _sys.modules['onevizion.Import']
 
 
@@ -373,7 +373,7 @@ class TestImportRun(object):
         finally:
             try:
                 os.remove(tmp)
-            except:
+            except Exception:
                 pass
 
 
@@ -506,6 +506,24 @@ class TestImportGetProcessData(object):
         assert "status=QUEUED" in call_url
         assert "import_name=" in call_url
         assert "owner=" in call_url
+
+    @mock.patch.object(_ov_Import_module, 'curl')
+    def test_get_process_data_is_pdf_uses_its_own_argument(self, mock_curl_cls):
+        """is_pdf must carry isPdf, not comments.
+
+        Regression test for Import.py:183. The call was
+        addParam('is_pdf', comments), so isPdf was silently ignored and the
+        comments value landed in the is_pdf query parameter. Passing both
+        arguments with different values is what separates them.
+        """
+        mock_curl_cls.return_value = make_mock_curl(json_data=[])
+        imp = Import(URL="https://test.onevizion.com", userName="u", password="p")
+        imp.processId = 1
+        imp.getProcessData(comments="nightly run", isPdf=True)
+        call_url = mock_curl_cls.call_args[0][1]
+        assert "is_pdf=True" in call_url
+        assert "comments=nightly+run" in call_url
+        assert "is_pdf=nightly" not in call_url
 
     @mock.patch.object(_ov_Import_module, 'curl')
     def test_get_process_data_with_status_list(self, mock_curl_cls):

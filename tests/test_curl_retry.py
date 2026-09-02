@@ -7,11 +7,19 @@ Tests demonstrate:
 """
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+
 import sys
 import time
+
 import pytest
-import responses
 import requests
+import responses
+
+if sys.version_info[0] >= 3:
+    from unittest import mock
+else:
+    import mock
+
 from onevizion.curl import curl
 
 
@@ -137,3 +145,41 @@ class TestCurlRetry(object):
         assert len(responses.calls) == 2, "Should attempt twice"
         assert len(c.errors) == 0, "Should succeed after retry"
         assert c.request.status_code == 200
+
+    def test_sub_200_status_terminates_loop(self):
+        """Statuses below 200 must error out instead of spinning the retry loop.
+
+        Regression test for the fallthrough at curl.py:223-225. A 1xx response
+        matched no branch, so `attempt` was never incremented and the loop ran
+        forever.
+
+        The stub stops serving responses after a bounded number of requests so
+        that a regression cannot hang CI until the job timeout. Its error is
+        absorbed by the catch-all handler at curl.py:237, which breaks the
+        loop, so the failure surfaces as the call-count assertion below (4 != 1)
+        rather than as a raised exception.
+        """
+        calls = []
+
+        def _informational(*args, **kwargs):
+            calls.append(1)
+            if len(calls) > 3:
+                raise AssertionError(
+                    "retry loop did not terminate on a sub-200 status "
+                    "({0} requests made)".format(len(calls))
+                )
+            resp = mock.MagicMock()
+            resp.status_code = 100
+            resp.reason = "Continue"
+            resp.text = ""
+            return resp
+
+        # patch.object on the module, not a dotted path: the py2.7 mock backport
+        # cannot resolve "onevizion.curl.requests.request" through a module
+        # attribute. onevizion.curl uses this same requests module object.
+        with mock.patch.object(requests, "request", side_effect=_informational):
+            c = curl('GET', 'http://api.com/informational', max_retries=2)
+
+        assert len(calls) == 1, "sub-200 status is permanent and must not be retried"
+        assert len(c.errors) > 0, "sub-200 status should record an error"
+        assert "100" in c.errors[0]

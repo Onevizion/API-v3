@@ -7,10 +7,13 @@ Tests demonstrate:
 """
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+
 import sys
-import responses
-import requests
+
 import pytest
+import requests
+import responses
+
 from onevizion.curl import curl
 
 

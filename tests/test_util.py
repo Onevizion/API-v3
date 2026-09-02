@@ -1,35 +1,35 @@
 """Tests for onevizion.util module."""
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pytest
-import sys
-import os
-import json
+
 import base64
-import tempfile
-from datetime import datetime, date
+import json
+import sys
 from collections import OrderedDict
+from datetime import date, datetime
+
+import pytest
 
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
-    from unittest import mock
+    pass
 else:
-    import mock
+    pass
 
 import onevizion
 from onevizion.util import (
-    Message,
-    TraceMessage,
-    getUrlContainingScheme,
-    GetParameters,
-    GetPasswords,
     CheckParameters,
     CheckPasswords,
-    URLEncode,
-    JSONEncode,
-    JSONValue,
-    JSONEndValue,
     EFileEncode,
+    GetParameters,
+    GetPasswords,
+    JSONEncode,
+    JSONEndValue,
+    JSONValue,
+    Message,
+    TraceMessage,
+    URLEncode,
+    getUrlContainingScheme,
 )
 
 

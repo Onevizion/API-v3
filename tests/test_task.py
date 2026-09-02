@@ -1,9 +1,9 @@
 """Tests for onevizion.task module."""
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pytest
-import sys
+
 import json
+import sys
 
 # Python 2/3 compatibility
 if sys.version_info[0] >= 3:
@@ -12,7 +12,7 @@ else:
     import mock
 
 import requests
-import onevizion.task
+
 from onevizion.task import Task
 
 
