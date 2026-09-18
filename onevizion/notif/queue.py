@@ -54,8 +54,10 @@ class NotifQueue:
 			raise Exception(OVCall.errors)
 		return OVCall.jsonData
 
-	def updateNotifQueueRecStatusById(self, notifQueueRecId, status):
+	def updateNotifQueueRecStatusById(self, notifQueueRecId, status, messageIdHeader=None):
 		URL = "{URL}/api/internal/notif/queue/{notifQueueRecId}/update_status?status={status}".format(URL=self._URL, notifQueueRecId=notifQueueRecId, status=status)
+		if messageIdHeader is not None and messageIdHeader != "":
+			URL = "{URL}&message_id_header={messageIdHeader}".format(URL=URL, messageIdHeader=URLEncode(messageIdHeader))
 		OVCall = curl('PATCH', URL, headers=self._headers, auth=self._auth)
 		if len(OVCall.errors) > 0:
 			raise Exception(OVCall.errors)
@@ -67,4 +69,4 @@ class NotifQueue:
 			raise Exception(OVCall.errors)
 
 	def updateNotifQueueRecStatus(self, notifQueueRec):
-		self.updateNotifQueueRecStatusById(notifQueueRec.notifQueueId, notifQueueRec.status)
+		self.updateNotifQueueRecStatusById(notifQueueRec.notifQueueId, notifQueueRec.status, getattr(notifQueueRec, 'messageIdHeader', None))

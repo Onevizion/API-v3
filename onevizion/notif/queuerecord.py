@@ -14,4 +14,12 @@ class NotifQueueRecord:
 		self.msg = jsonObject['msg']
 		self.html = jsonObject['html']
 		self.blobDataIds = jsonObject['blobDataIds']
+		self.threadName = jsonObject.get('threadName')
+		self.messageIdHeader = jsonObject.get('messageIdHeader')
+		self.referencesHeader = jsonObject.get('referencesHeader')
+		self.programId = jsonObject.get('programId')
+		self.notifServiceId = jsonObject.get('notifServiceId')
+		self.processedTs = jsonObject.get('processedTs')
+		self.scheduledDeliveryTs = jsonObject.get('scheduledDeliveryTs')
+		self.expirationTs = jsonObject.get('expirationTs')
 
