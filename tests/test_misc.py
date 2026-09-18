@@ -389,6 +389,27 @@ if sys.version_info[0] >= 3:
             call_url = mock_curl_cls.call_args[0][1]
             assert "/notif/queue/5/update_status" in call_url
             assert "status=SUCCESS" in call_url
+            assert "message_id_header" not in call_url
+
+        @mock.patch("onevizion.notif.queue.curl")
+        def test_update_notif_queue_rec_status_by_id_with_message_id_header(self, mock_curl_cls):
+            mock_curl_cls.return_value = make_mock_curl(json_data={})
+            q = NotifQueue(serviceId=10, URL="https://test.onevizion.com", userName="u", password="p")
+            q.updateNotifQueueRecStatusById(notifQueueRecId=5, status="SUCCESS",
+                                            messageIdHeader="<1755612079.42@onevizion.com>")
+            call_url = mock_curl_cls.call_args[0][1]
+            assert "message_id_header=" in call_url
+            # Special characters must be URL-encoded
+            assert "<" not in call_url
+            assert "@" not in call_url.split("message_id_header=")[1]
+
+        @mock.patch("onevizion.notif.queue.curl")
+        def test_update_notif_queue_rec_status_by_id_blank_header_omitted(self, mock_curl_cls):
+            mock_curl_cls.return_value = make_mock_curl(json_data={})
+            q = NotifQueue(serviceId=10, URL="https://test.onevizion.com", userName="u", password="p")
+            q.updateNotifQueueRecStatusById(notifQueueRecId=5, status="SUCCESS", messageIdHeader="")
+            call_url = mock_curl_cls.call_args[0][1]
+            assert "message_id_header" not in call_url
 
         @mock.patch("onevizion.notif.queue.curl")
         def test_update_notif_queue_rec_status_by_id_raises_on_error(self, mock_curl_cls):
@@ -419,9 +440,23 @@ if sys.version_info[0] >= 3:
             rec = mock.MagicMock()
             rec.notifQueueId = 7
             rec.status = "SUCCESS"
+            rec.messageIdHeader = None
             q.updateNotifQueueRecStatus(rec)
             call_url = mock_curl_cls.call_args[0][1]
             assert "/notif/queue/7/update_status" in call_url
+            assert "message_id_header" not in call_url
+
+        @mock.patch("onevizion.notif.queue.curl")
+        def test_update_notif_queue_rec_status_delegates_message_id_header(self, mock_curl_cls):
+            mock_curl_cls.return_value = make_mock_curl(json_data={})
+            q = NotifQueue(serviceId=10, URL="https://test.onevizion.com", userName="u", password="p")
+            rec = mock.MagicMock()
+            rec.notifQueueId = 7
+            rec.status = "SUCCESS"
+            rec.messageIdHeader = "<abc@onevizion.com>"
+            q.updateNotifQueueRecStatus(rec)
+            call_url = mock_curl_cls.call_args[0][1]
+            assert "message_id_header=" in call_url
 
     class TestNotifQueueRecord(object):
         """Test NotifQueueRecord dataclass."""
@@ -464,6 +499,37 @@ if sys.version_info[0] >= 3:
         def test_blob_data_ids_list(self):
             rec = NotifQueueRecord(self._make_json({"blobDataIds": [1, 2, 3]}))
             assert rec.blobDataIds == [1, 2, 3]
+
+        def test_extended_fields_parsed(self):
+            rec = NotifQueueRecord(self._make_json({
+                "threadName": "ONEVIZION_OV-00000836-12345678910",
+                "messageIdHeader": "<message-id@onevizion.com>",
+                "referencesHeader": "<references@onevizion.com>",
+                "programId": 1000,
+                "notifServiceId": 1000000,
+                "processedTs": "2026-08-29T11:00:00",
+                "scheduledDeliveryTs": "2026-08-29T12:00:00",
+                "expirationTs": "2026-08-30T10:15:30",
+            }))
+            assert rec.threadName == "ONEVIZION_OV-00000836-12345678910"
+            assert rec.messageIdHeader == "<message-id@onevizion.com>"
+            assert rec.referencesHeader == "<references@onevizion.com>"
+            assert rec.programId == 1000
+            assert rec.notifServiceId == 1000000
+            assert rec.processedTs == "2026-08-29T11:00:00"
+            assert rec.scheduledDeliveryTs == "2026-08-29T12:00:00"
+            assert rec.expirationTs == "2026-08-30T10:15:30"
+
+        def test_extended_fields_default_to_none_when_absent(self):
+            rec = NotifQueueRecord(self._make_json())
+            assert rec.threadName is None
+            assert rec.messageIdHeader is None
+            assert rec.referencesHeader is None
+            assert rec.programId is None
+            assert rec.notifServiceId is None
+            assert rec.processedTs is None
+            assert rec.scheduledDeliveryTs is None
+            assert rec.expirationTs is None
 
     class TestNotifQueueStatus(object):
         """Test NotifQueueStatus enum."""
