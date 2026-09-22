@@ -1,0 +1,163 @@
+name: Publish
+
+# Publishes `onevizion` to PyPI via Trusted Publishing (OIDC). No long-lived
+# credential lives in this repo or on anyone's laptop.
+#
+# Two ways in:
+#   * push a version tag (e.g. 1.1.8)  -> builds, smoke-tests, uploads to PyPI
+#   * run manually (workflow_dispatch) -> defaults to Test PyPI for a dry run
+#
+# Trusted Publisher registration (done once, in the PyPI/TestPyPI web UI under
+# the project's "Publishing" settings):
+#   PyPI      -> owner Onevizion, repo API-v3, workflow publish.yml, environment release
+#   TestPyPI  -> owner Onevizion, repo API-v3, workflow publish.yml, environment testpypi
+# Neither site verifies the workflow exists at registration time, so the
+# registration can be done before or after this file merges.
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to upload the build"
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: testpypi
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Guards against the failure mode where a tag and pyproject.toml disagree.
+      # The repo already carries one instance of this: tag 1.1.7 points at a
+      # 2025 commit while master declares version 1.1.7, 95 commits later.
+      - name: Tag must match the project version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          version=$(uv version --short)
+          echo "tag=$tag  pyproject=$version"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag '$tag' does not match pyproject.toml version '$version'."
+            exit 1
+          fi
+
+      - name: Build
+        run: uv build
+
+      - name: Show what was built
+        run: ls -l dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  smoke-test:
+    name: Install smoke test
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Deliberately NO checkout: the install must be exercised from a directory
+      # with no source tree in it, or `import onevizion` resolves to ./onevizion
+      # and proves nothing. This is the check that catches a metadata-less
+      # UNKNOWN-0.0.0 build.
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install the wheel into a clean venv and import it
+        run: |
+          set -eu
+          python -m venv /tmp/smoke-wheel
+          /tmp/smoke-wheel/bin/pip install --quiet dist/*.whl
+          cd /tmp
+          /tmp/smoke-wheel/bin/python - <<'PY'
+          import importlib.metadata as md
+          import onevizion, os
+
+          dist = md.distribution("onevizion")
+          name, version = dist.metadata["Name"], dist.version
+          print("name    ", name)
+          print("version ", version)
+          print("loaded  ", os.path.dirname(onevizion.__file__))
+
+          assert name.lower() == "onevizion", "wrong distribution name: %r" % name
+          assert version != "0.0.0", "metadata-less build (UNKNOWN-0.0.0)"
+          assert "site-packages" in onevizion.__file__, "imported from the source tree, not the install"
+          print("wheel OK")
+          PY
+
+      - name: Install the sdist into a clean venv and import it
+        run: |
+          set -eu
+          python -m venv /tmp/smoke-sdist
+          /tmp/smoke-sdist/bin/pip install --quiet dist/*.tar.gz
+          cd /tmp
+          /tmp/smoke-sdist/bin/python - <<'PY'
+          import importlib.metadata as md
+          import onevizion
+
+          dist = md.distribution("onevizion")
+          assert dist.metadata["Name"].lower() == "onevizion"
+          assert dist.version != "0.0.0", "metadata-less sdist build (UNKNOWN-0.0.0)"
+          assert "site-packages" in onevizion.__file__
+          print("sdist OK", dist.version)
+          PY
+
+  publish:
+    name: Upload to ${{ (github.event_name == 'workflow_dispatch' && inputs.target) || 'pypi' }}
+    needs: [build, smoke-test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    environment: ${{ (github.event_name == 'workflow_dispatch' && inputs.target) || 'release' }}
+
+    permissions:
+      id-token: write   # the OIDC token that Trusted Publishing exchanges; nothing else
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to Test PyPI
+        if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish to PyPI
+        if: github.event_name != 'workflow_dispatch' || inputs.target == 'pypi'
+        uses: pypa/gh-action-pypi-publish@release/v1

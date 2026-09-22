@@ -182,11 +182,64 @@ jobs:
 
           echo "Package names are consistent"
 
+  package:
+    name: Package builds and installs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build sdist + wheel
+        run: uv build
+
+      # Installed OUTSIDE the source tree on purpose. Run from the repo root,
+      # `import onevizion` resolves to ./onevizion and passes even when the
+      # build produced metadata-less UNKNOWN-0.0.0 artifacts.
+      - name: Install the wheel into a clean venv and import it
+        run: |
+          set -eu
+          python -m venv /tmp/smoke-wheel
+          /tmp/smoke-wheel/bin/pip install --quiet dist/*.whl
+          cd /tmp
+          /tmp/smoke-wheel/bin/python - <<'SMOKE'
+          import importlib.metadata as md
+          import onevizion
+
+          dist = md.distribution("onevizion")
+          print("installed", dist.metadata["Name"], dist.version)
+          assert dist.metadata["Name"].lower() == "onevizion"
+          assert dist.version != "0.0.0", "metadata-less build (UNKNOWN-0.0.0)"
+          assert "site-packages" in onevizion.__file__, "imported from the source tree, not the install"
+          SMOKE
+
+      - name: Install the sdist into a clean venv and import it
+        run: |
+          set -eu
+          python -m venv /tmp/smoke-sdist
+          /tmp/smoke-sdist/bin/pip install --quiet dist/*.tar.gz
+          cd /tmp
+          /tmp/smoke-sdist/bin/python - <<'SMOKE'
+          import importlib.metadata as md
+          import onevizion
+
+          dist = md.distribution("onevizion")
+          print("installed", dist.metadata["Name"], dist.version)
+          assert dist.version != "0.0.0", "metadata-less sdist build (UNKNOWN-0.0.0)"
+          assert "site-packages" in onevizion.__file__
+          SMOKE
+
   # Summary job that all checks must pass
   check:
     name: All Tests Passed
     if: always()
-    needs: [test, lint, check-deps]
+    needs: [test, lint, check-deps, package]
     runs-on: ubuntu-latest
 
     steps:
@@ -202,5 +255,9 @@ jobs:
         if: needs.check-deps.result != 'success'
         run: exit 1
 
+      - name: Check package build status
+        if: needs.package.result != 'success'
+        run: exit 1
+
       - name: All checks passed
-        run: echo "All tests, lint checks, and dependency validation passed"
+        run: echo "All tests, lint checks, packaging, and dependency validation passed"
