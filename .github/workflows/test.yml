@@ -219,6 +219,29 @@ jobs:
           assert "site-packages" in onevizion.__file__, "imported from the source tree, not the install"
           SMOKE
 
+      # Python 2.7 is a supported target, and the test matrix cannot prove it.
+      # That leg installs requirements-dev.txt (which carries enum34) and then
+      # imports from the source tree, so a missing RUNTIME dependency is
+      # invisible to it. This installs the built wheel into a bare 2.7 with no
+      # dev extras -- what a consumer actually gets from `pip install onevizion`.
+      - name: Install the wheel on Python 2.7 and import it
+        run: |
+          set -eu
+          cat > /tmp/py27check.py <<'PY'
+          import onevizion, pkg_resources
+          d = pkg_resources.get_distribution("onevizion")
+          print("version", d.version)
+          print("loaded", onevizion.__file__)
+          assert d.version != "0.0.0", "metadata-less install (UNKNOWN-0.0.0)"
+          assert "site-packages" in onevizion.__file__, "imported from the source tree"
+          print("py2.7 wheel install + import OK")
+          PY
+          docker run --rm \
+            -v "$PWD/dist:/dist:ro" \
+            -v /tmp/py27check.py:/tmp/py27check.py:ro \
+            -w /tmp python:2.7 \
+            sh -c 'pip install --quiet /dist/*-py2.py3-none-any.whl && python /tmp/py27check.py'
+
       - name: Install the sdist into a clean venv and import it
         run: |
           set -eu
