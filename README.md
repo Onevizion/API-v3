@@ -89,10 +89,12 @@ To cut a release:
    Tags are bare `N.N.N` with no `v` prefix, and the tag must match
    `pyproject.toml` exactly or the build fails.
 
-The workflow builds with `uv build`, installs both the wheel and the sdist into
-clean venvs outside the source tree and imports them, and uploads only if that
-passes. The same smoke test runs on every pull request as the `package` job, so
-a broken artifact fails review rather than surfacing at release time.
+The workflow builds with `uv build`, then runs `scripts/smoke-test-dist.sh`:
+the wheel and the sdist are installed into clean venvs outside the source tree
+and imported, and the wheel is also installed into a bare `python:2.7` container
+with no dev extras. It uploads only if that passes. The same script runs on every
+pull request as the `package` job, so a broken artifact fails review rather than
+surfacing at release time.
 
 ### One-time setup
 

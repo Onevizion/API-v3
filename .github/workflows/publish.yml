@@ -96,74 +96,18 @@ jobs:
         with:
           python-version: "3.11"
 
-      # Deliberately NO checkout: the install must be exercised from a directory
-      # with no source tree in it, or `import onevizion` resolves to ./onevizion
-      # and proves nothing. This is the check that catches a metadata-less
-      # UNKNOWN-0.0.0 build.
+      # The checkout is for scripts/smoke-test-dist.sh only. The script imports
+      # from /tmp, never from the tree, so a metadata-less UNKNOWN-0.0.0 build
+      # still fails. Same script as the `package` job in test.yml.
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
 
-      - name: Install the wheel into a clean venv and import it
-        run: |
-          set -eu
-          python -m venv /tmp/smoke-wheel
-          /tmp/smoke-wheel/bin/pip install --quiet dist/*.whl
-          cd /tmp
-          /tmp/smoke-wheel/bin/python - <<'PY'
-          import importlib.metadata as md
-          import onevizion, os
-
-          dist = md.distribution("onevizion")
-          name, version = dist.metadata["Name"], dist.version
-          print("name    ", name)
-          print("version ", version)
-          print("loaded  ", os.path.dirname(onevizion.__file__))
-
-          assert name.lower() == "onevizion", "wrong distribution name: %r" % name
-          assert version != "0.0.0", "metadata-less build (UNKNOWN-0.0.0)"
-          assert "site-packages" in onevizion.__file__, "imported from the source tree, not the install"
-          print("wheel OK")
-          PY
-
-      # 2.7 is a supported target and nothing else on the release path proves
-      # it: the test matrix's 2.7 leg imports from the source tree with dev
-      # extras installed, so a missing runtime dependency is invisible there.
-      - name: Install the wheel on Python 2.7 and import it
-        run: |
-          set -eu
-          cat > /tmp/py27check.py <<'PY'
-          import onevizion, pkg_resources
-          d = pkg_resources.get_distribution("onevizion")
-          print("version", d.version)
-          print("loaded", onevizion.__file__)
-          assert d.version != "0.0.0", "metadata-less install (UNKNOWN-0.0.0)"
-          assert "site-packages" in onevizion.__file__, "imported from the source tree"
-          print("py2.7 wheel install + import OK")
-          PY
-          docker run --rm \
-            -v "$PWD/dist:/dist:ro" \
-            -v /tmp/py27check.py:/tmp/py27check.py:ro \
-            -w /tmp python:2.7 \
-            sh -c 'pip install --quiet /dist/*-py2.py3-none-any.whl && python /tmp/py27check.py'
-
-      - name: Install the sdist into a clean venv and import it
-        run: |
-          set -eu
-          python -m venv /tmp/smoke-sdist
-          /tmp/smoke-sdist/bin/pip install --quiet dist/*.tar.gz
-          cd /tmp
-          /tmp/smoke-sdist/bin/python - <<'PY'
-          import importlib.metadata as md
-          import onevizion
-
-          dist = md.distribution("onevizion")
-          assert dist.metadata["Name"].lower() == "onevizion"
-          assert dist.version != "0.0.0", "metadata-less sdist build (UNKNOWN-0.0.0)"
-          assert "site-packages" in onevizion.__file__
-          print("sdist OK", dist.version)
-          PY
+      - name: Install the built artifacts and import them
+        run: scripts/smoke-test-dist.sh dist
 
   publish:
     name: Upload to ${{ github.event_name == 'workflow_dispatch' && 'Test PyPI' || 'PyPI' }}
