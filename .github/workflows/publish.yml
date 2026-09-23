@@ -4,7 +4,7 @@ name: Publish
 # credential lives in this repo or on anyone's laptop.
 #
 # Two ways in, and only one of them reaches production:
-#   * push a version tag (e.g. 1.1.8)  -> builds, smoke-tests, uploads to PyPI
+#   * push a version tag (e.g. 1.2.0)  -> builds, smoke-tests, uploads to PyPI
 #   * run manually (workflow_dispatch) -> uploads to Test PyPI, always
 #
 # There is deliberately no manual route to PyPI. A tag is the only thing that
@@ -23,7 +23,7 @@ name: Publish
 # token. Before the first tag push the `release` environment must exist in this
 # repo's settings with a required reviewer and its deployment branches limited
 # to tags; otherwise GitHub creates it unprotected on first run and every
-# account with push access can release. See README "Releasing".
+# account with push access can release. See RELEASING.md.
 
 on:
   push:
@@ -47,14 +47,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
+          # Full history, so the master-ancestry guard below can see origin/master.
+          fetch-depth: 0
 
-      # Guards the forgotten version bump: `git tag 1.1.8` pushed while
+      - uses: ./.github/actions/build-dist
+
+      # Guards the forgotten version bump: `git tag 1.2.0` pushed while
       # pyproject.toml still says 1.1.7, which would upload under the wrong
       # version or collide with one already on PyPI.
       #
@@ -73,8 +72,18 @@ jobs:
             exit 1
           fi
 
-      - name: Build
-        run: uv build
+      # Branch protection covers merges, not tags: without this, a tag on an
+      # unmerged commit releases code that never passed review or the test
+      # suite. This guards against that ACCIDENT only. The workflow file comes
+      # from the tagged commit, so anyone editing publish.yml on a branch can
+      # remove it; the `release` environment's protection is the real control.
+      - name: Tagged commit must be on master
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+            echo "::error::Tagged commit $GITHUB_SHA is not on master. Merge first, then tag the merge."
+            exit 1
+          fi
 
       - name: Show what was built
         run: ls -l dist/

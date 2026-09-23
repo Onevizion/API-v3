@@ -1,0 +1,19 @@
+name: Build dist
+description: >-
+  Build the sdist and wheel into dist/ with uv. The one definition of the build,
+  shared by the `package` job in test.yml and the `build` job in publish.yml so
+  the PR gate and the release build cannot drift apart. Leaves python 3.11 and
+  uv on PATH for later steps.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    - uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+    - name: Build sdist + wheel
+      shell: bash
+      run: uv build
