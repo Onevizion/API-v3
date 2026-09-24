@@ -65,3 +65,7 @@ onevizion.Config["Verbosity"] = 1
 The Logging part is handled in onevizion.Config["Trace"].  Trace is an OrderedDict.  This can be used however you need to get a list of Messaging that hapened during the script's run.
 
 You can find samples of scripts using this library at [api-samples](https://github.com/Onevizion/api-samples)
+
+## Releasing
+
+Maintainers: see [RELEASING.md](https://github.com/Onevizion/API-v3/blob/master/RELEASING.md).

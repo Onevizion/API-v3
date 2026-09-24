@@ -1,0 +1,149 @@
+name: Publish
+
+# Publishes `onevizion` to PyPI via Trusted Publishing (OIDC). No long-lived
+# credential lives in this repo or on anyone's laptop.
+#
+# Two ways in, and only one of them reaches production:
+#   * push a version tag (e.g. 1.2.0)  -> builds, smoke-tests, uploads to PyPI
+#   * run manually (workflow_dispatch) -> uploads to Test PyPI, always
+#
+# There is deliberately no manual route to PyPI. A tag is the only thing that
+# releases, so every production upload carries the tag/version guard below and
+# points at a reviewable ref.
+#
+# Trusted Publisher registration, done once per site in the web UI under the
+# project's "Publishing" settings (/manage/project/onevizion/settings/publishing/):
+#   PyPI      -> owner Onevizion, repo API-v3, workflow publish.yml, environment release
+#   TestPyPI  -> owner Onevizion, repo API-v3, workflow publish.yml, environment testpypi
+# Neither site verifies the workflow exists at registration time, so registration
+# can happen before or after this file merges. PyPI and Test PyPI are separate
+# accounts with separate logins -- registering one does not register the other.
+#
+# The environment name here must match the one registered, or PyPI rejects the
+# token. Before the first tag push the `release` environment must exist in this
+# repo's settings with a required reviewer and its deployment branches limited
+# to tags; otherwise GitHub creates it unprotected on first run and every
+# account with push access can release. See RELEASING.md.
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  # Manual runs always go to Test PyPI. Releasing to PyPI requires a tag.
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history, so the master-ancestry guard below can see origin/master.
+          fetch-depth: 0
+
+      - uses: ./.github/actions/build-dist
+
+      # Guards the forgotten version bump: `git tag 1.2.0` pushed while
+      # pyproject.toml still says 1.1.7, which would upload under the wrong
+      # version or collide with one already on PyPI.
+      #
+      # It does NOT catch the other defect in this repo's history. Tag 1.1.7
+      # points at a 2025 commit 95 behind master, and at that commit setup.py
+      # declared 1.1.7 as well -- tag and file agreed. A tag left pointing at a
+      # stale commit is invisible to any tag-vs-file check.
+      - name: Tag must match the project version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          version=$(uv version --short)
+          echo "tag=$tag  pyproject=$version"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag '$tag' does not match pyproject.toml version '$version'."
+            exit 1
+          fi
+
+      # Branch protection covers merges, not tags: without this, a tag on an
+      # unmerged commit releases code that never passed review or the test
+      # suite. This guards against that ACCIDENT only. The workflow file comes
+      # from the tagged commit, so anyone editing publish.yml on a branch can
+      # remove it; the `release` environment's protection is the real control.
+      - name: Tagged commit must be on master
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+            echo "::error::Tagged commit $GITHUB_SHA is not on master. Merge first, then tag the merge."
+            exit 1
+          fi
+
+      - name: Show what was built
+        run: ls -l dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  smoke-test:
+    name: Install smoke test
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # The checkout is for scripts/smoke-test-dist.sh only. The script imports
+      # from /tmp, never from the tree, so a metadata-less UNKNOWN-0.0.0 build
+      # still fails. Same script as the `package` job in test.yml.
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install the built artifacts and import them
+        run: scripts/smoke-test-dist.sh dist
+
+  publish:
+    name: Upload to ${{ github.event_name == 'workflow_dispatch' && 'Test PyPI' || 'PyPI' }}
+    needs: [build, smoke-test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    environment: ${{ github.event_name == 'workflow_dispatch' && 'testpypi' || 'release' }}
+
+    permissions:
+      id-token: write   # the OIDC token that Trusted Publishing exchanges; nothing else
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to Test PyPI
+        if: github.event_name == 'workflow_dispatch'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          # Rehearsing the same version twice is a normal thing to want; without
+          # this the second run fails on the duplicate filename.
+          skip-existing: true
+
+      - name: Publish to PyPI
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: pypa/gh-action-pypi-publish@release/v1

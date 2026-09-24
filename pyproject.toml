@@ -31,6 +31,11 @@ classifiers = [
 
 dependencies = [
     "requests>=2.20.0",
+    # onevizion/__init__.py, notif/queuestatus.py and module/loglevel.py all
+    # `from enum import Enum`, which is stdlib only on 3.4+. Without this a
+    # 2.7 install imports cleanly in CI (requirements-dev.txt pulls enum34)
+    # and raises ImportError for every real consumer.
+    "enum34; python_version < '3.4'",
 ]
 
 [project.optional-dependencies]
